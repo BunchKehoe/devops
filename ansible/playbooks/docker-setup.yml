@@ -89,17 +89,15 @@
         state: started
         enabled: yes
 
-    - name: Install Docker SDK for Python (required for Ansible Docker modules)
-      pip:
-        name: docker
-        state: present
-        executable: pip3
+    - name: Check if Docker Swarm is already initialized
+      shell: docker node ls
+      register: swarm_status
+      changed_when: false
+      ignore_errors: yes
 
-    - name: Initialize Docker Swarm
-      community.docker.docker_swarm:
-        state: present
-        advertise_addr: "{{ docker_swarm_addr }}"
-        listen_addr: "{{ docker_swarm_addr }}:{{ docker_swarm_port }}"
+    - name: Initialize Docker Swarm using CLI
+      shell: docker swarm init --advertise-addr {{ docker_swarm_addr }} --listen-addr {{ docker_swarm_addr }}:{{ docker_swarm_port }}
+      when: swarm_status.rc != 0
       run_once: true
 
     - name: Get Swarm join token for workers
@@ -107,27 +105,39 @@
       register: swarm_worker_token
       run_once: true
       changed_when: false
+      when: swarm_status.rc == 0 or swarm_status.rc != 0
 
     - name: Get Swarm join token for managers
       command: docker swarm join-token manager -q
       register: swarm_manager_token
       run_once: true
       changed_when: false
+      when: swarm_status.rc == 0 or swarm_status.rc != 0
 
-    - name: Create Docker networks
-      community.docker.docker_network:
-        name: "{{ item }}"
-        driver: overlay
-        attachable: true
-      loop:
-        - "{{ app_network }}"
-        - "{{ logging_network }}"
+    - name: Check if app_network exists
+      shell: docker network ls | grep {{ app_network }}
+      register: app_network_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create app Docker network using CLI
+      shell: docker network create --driver overlay --attachable {{ app_network }}
+      when: app_network_exists.rc != 0
       run_once: true
 
-    - name: Create Docker volumes for persistent data
-      community.docker.docker_volume:
-        name: "{{ item }}"
-        driver: local
+    - name: Check if logging_network exists
+      shell: docker network ls | grep {{ logging_network }}
+      register: logging_network_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create logging Docker network using CLI
+      shell: docker network create --driver overlay --attachable {{ logging_network }}
+      when: logging_network_exists.rc != 0
+      run_once: true
+
+    - name: Create Docker volumes for persistent data using CLI
+      shell: docker volume create {{ item }}
       loop:
         - elasticsearch_data
         - kibana_data
@@ -135,12 +145,9 @@
         - airflow_data
         - postgres_data
       run_once: true
-
-    - name: Install Docker Compose
-      pip:
-        name: docker-compose
-        state: present
-        executable: pip3
+      register: volume_creation
+      changed_when: "'already exists' not in volume_creation.stderr"
+      failed_when: volume_creation.rc != 0 and 'already exists' not in volume_creation.stderr
 
     - name: Create application directories
       file:

@@ -62,8 +62,6 @@
     - name: Install Python packages via pip
       pip:
         name:
-          - docker
-          - docker-compose
           - requests
           - pyyaml
         state: present
