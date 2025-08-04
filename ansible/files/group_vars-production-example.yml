@@ -1,0 +1,62 @@
+# Example environment-specific variables
+# Copy this file to inventory/group_vars/production.yml, staging.yml, etc.
+
+# Environment-specific settings
+environment: production  # or staging, development, etc.
+
+# SSL Configuration for production
+nginx_ssl_enabled: true
+nginx_ssl_cert_path: /etc/ssl/certs/production.crt
+nginx_ssl_key_path: /etc/ssl/private/production.key
+
+# Enhanced security for production
+fail2ban_enabled: true
+firewall_enabled: true
+
+# Resource limits for production
+elasticsearch_heap_size: 2g
+airflow_fernet_key: "CHANGE_THIS_TO_A_SECURE_KEY"
+
+# Production user accounts
+users_to_create:
+  - username: devops
+    groups: [sudo, docker]
+    shell: /bin/bash
+    ssh_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC... # Add your public key here"
+
+# Git configuration for production
+git_user_name: "DevOps Team"
+git_user_email: "devops@company.com"
+
+# Database passwords (use ansible-vault to encrypt these)
+postgres_password: "CHANGE_THIS_SECURE_PASSWORD"
+
+# LDAP configuration for production (if using Active Directory)
+ldap_enabled: true
+ldap_server: "ldap.company.com"
+ldap_base_dn: "DC=company,DC=com"
+ldap_bind_dn: "CN=ansible-bind,OU=Service Accounts,DC=company,DC=com"
+ldap_bind_password: "VAULT_ENCRYPTED_PASSWORD"  # Use ansible-vault
+
+# Monitoring and alerting
+log_retention_days: 90
+
+# Backup configuration
+backup_enabled: true
+backup_schedule: "0 2 * * *"  # Daily at 2 AM
+backup_retention_days: 30
+
+# Network configuration
+allowed_networks:
+  - "10.0.0.0/8"
+  - "172.16.0.0/12"
+  - "192.168.0.0/16"
+
+# Application-specific production settings
+nifi_cluster_is_node: true
+airflow_executor: CeleryExecutor
+
+# Resource monitoring thresholds
+disk_usage_threshold: 85
+memory_usage_threshold: 80
+cpu_load_threshold: 4.0

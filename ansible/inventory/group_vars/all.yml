@@ -1,0 +1,111 @@
+# Global variables for all hosts
+---
+
+# Basic packages to install
+basic_packages:
+  - vim
+  - curl
+  - wget
+  - python3-pip
+  - htop
+  - net-tools
+  - unzip
+  - git
+
+# User management settings
+users_to_create: []
+# Example:
+# users_to_create:
+#   - username: johndoe
+#     groups: [sudo, docker]
+#     shell: /bin/bash
+#     ssh_key: "ssh-rsa AAAAB3NzaC1yc2E..."
+
+# LDAP/Entra configuration
+ldap_enabled: false
+ldap_server: ""
+ldap_base_dn: ""
+ldap_bind_dn: ""
+ldap_bind_password: ""  # Use ansible-vault for this
+ldap_search_filter: "(objectClass=user)"
+
+# Git configuration
+git_user_name: ""
+git_user_email: ""
+git_default_branch: "main"
+
+# Docker configuration
+docker_edition: ce
+docker_users:
+  - "{{ ansible_user }}"
+docker_daemon_options:
+  storage-driver: overlay2
+  log-driver: fluentd
+  log-opts:
+    fluentd-address: localhost:24224
+    tag: docker.{{.Name}}
+
+# Docker Swarm configuration
+docker_swarm_addr: "{{ ansible_default_ipv4.address }}"
+docker_swarm_port: 2377
+
+# Network configuration
+app_network: app_network
+logging_network: logging_network
+
+# Nginx configuration
+nginx_ssl_enabled: false
+nginx_ssl_cert_path: /etc/ssl/certs/nginx.crt
+nginx_ssl_key_path: /etc/ssl/private/nginx.key
+nginx_client_max_body_size: 64M
+
+# ELK Stack configuration
+elasticsearch_version: "8.11.0"
+kibana_version: "8.11.0"
+fluentd_version: "v1.16"
+
+elasticsearch_heap_size: 1g
+elasticsearch_cluster_name: elk-cluster
+elasticsearch_node_name: elk-node-1
+
+kibana_server_host: "0.0.0.0"
+kibana_server_port: 5601
+
+# Fluentd configuration
+fluentd_port: 24224
+fluentd_inputs:
+  - type: forward
+    port: 24224
+  - type: syslog
+    port: 5140
+
+# Apache Nifi configuration
+nifi_version: "1.24.0"
+nifi_web_port: 8443
+nifi_cluster_is_node: true
+nifi_cluster_node_protocol_port: 11443
+nifi_zookeeper_connect_string: "localhost:2181"
+
+# Apache Airflow configuration
+airflow_version: "2.7.3"
+airflow_web_port: 8080
+airflow_executor: LocalExecutor
+airflow_fernet_key: ""  # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# Database configuration (for Airflow)
+postgres_db: airflow
+postgres_user: airflow
+postgres_password: ""  # Use ansible-vault for this
+
+# Logging retention
+log_retention_days: 30
+
+# Security settings
+firewall_enabled: true
+fail2ban_enabled: true
+
+# SSL/TLS settings (for future use)
+ssl_protocols:
+  - TLSv1.2
+  - TLSv1.3
+ssl_ciphers: "ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384"

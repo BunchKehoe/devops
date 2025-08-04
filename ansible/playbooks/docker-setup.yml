@@ -1,0 +1,248 @@
+---
+# Docker and Docker Swarm setup
+- name: Docker Swarm Setup
+  hosts: docker_hosts
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install Docker dependencies
+      package:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      package:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+
+    - name: Add users to docker group
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      loop: "{{ docker_users }}"
+
+    - name: Create Docker daemon configuration directory
+      file:
+        path: /etc/docker
+        state: directory
+        mode: '0755'
+
+    - name: Configure Docker daemon
+      copy:
+        content: |
+          {
+            "storage-driver": "{{ docker_daemon_options['storage-driver'] }}",
+            "log-driver": "{{ docker_daemon_options['log-driver'] }}",
+            "log-opts": {{ docker_daemon_options['log-opts'] | to_json }},
+            "live-restore": true,
+            "userland-proxy": false,
+            "experimental": false,
+            "metrics-addr": "0.0.0.0:9323",
+            "experimental": true
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+      notify: restart docker
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Initialize Docker Swarm
+      community.docker.docker_swarm:
+        state: present
+        advertise_addr: "{{ docker_swarm_addr }}"
+        listen_addr: "{{ docker_swarm_addr }}:{{ docker_swarm_port }}"
+      run_once: true
+
+    - name: Get Swarm join token for workers
+      command: docker swarm join-token worker -q
+      register: swarm_worker_token
+      run_once: true
+      changed_when: false
+
+    - name: Get Swarm join token for managers
+      command: docker swarm join-token manager -q
+      register: swarm_manager_token
+      run_once: true
+      changed_when: false
+
+    - name: Create Docker networks
+      community.docker.docker_network:
+        name: "{{ item }}"
+        driver: overlay
+        attachable: true
+      loop:
+        - "{{ app_network }}"
+        - "{{ logging_network }}"
+      run_once: true
+
+    - name: Create Docker volumes for persistent data
+      community.docker.docker_volume:
+        name: "{{ item }}"
+        driver: local
+      loop:
+        - elasticsearch_data
+        - kibana_data
+        - nifi_data
+        - airflow_data
+        - postgres_data
+      run_once: true
+
+    - name: Install Docker Compose
+      pip:
+        name: docker-compose
+        state: present
+        executable: pip3
+
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: docker
+      loop:
+        - /opt/docker/compose
+        - /opt/docker/configs
+        - /opt/docker/logs
+        - /opt/docker/data
+
+    - name: Configure Docker log rotation
+      copy:
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            }
+          }
+        dest: /etc/docker/daemon.json
+        mode: '0644'
+        backup: yes
+      notify: restart docker
+
+    - name: Configure Docker system prune cron job
+      cron:
+        name: "Docker system prune"
+        minute: "0"
+        hour: "2"
+        job: "/usr/bin/docker system prune -af --volumes"
+        user: root
+
+    - name: Install Docker monitoring tools
+      pip:
+        name:
+          - docker-py
+          - requests
+        state: present
+        executable: pip3
+
+    - name: Create Docker Swarm monitoring stack
+      copy:
+        content: |
+          version: '3.8'
+          
+          services:
+            portainer:
+              image: portainer/portainer-ce:latest
+              command: -H unix:///var/run/docker.sock
+              restart: always
+              ports:
+                - "9000:9000"
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+                - portainer_data:/data
+              networks:
+                - {{ app_network }}
+              deploy:
+                placement:
+                  constraints: [node.role == manager]
+          
+          volumes:
+            portainer_data:
+          
+          networks:
+            {{ app_network }}:
+              external: true
+        dest: /opt/docker/compose/portainer-stack.yml
+        mode: '0644'
+
+    - name: Deploy Portainer for Docker management
+      command: docker stack deploy -c /opt/docker/compose/portainer-stack.yml portainer
+      run_once: true
+
+    - name: Configure firewall for Docker Swarm
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "2376"  # Docker daemon
+        - "2377"  # Swarm cluster management
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+      when: firewall_enabled | default(true)
+
+    - name: Configure firewall for Docker Swarm UDP
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: udp
+      loop:
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+      when: firewall_enabled | default(true)
+
+    - name: Display Docker Swarm information
+      debug:
+        msg: |
+          Docker Swarm setup completed!
+          
+          Manager node: {{ ansible_default_ipv4.address }}
+          Worker join token: {{ swarm_worker_token.stdout }}
+          Manager join token: {{ swarm_manager_token.stdout }}
+          
+          Networks created:
+          - {{ app_network }}
+          - {{ logging_network }}
+          
+          Management interfaces:
+          - Portainer: http://{{ ansible_default_ipv4.address }}:9000
+          
+          To join additional nodes:
+          docker swarm join --token {{ swarm_worker_token.stdout }} {{ docker_swarm_addr }}:{{ docker_swarm_port }}
+
+  handlers:
+    - name: restart docker
+      service:
+        name: docker
+        state: restarted

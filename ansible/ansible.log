@@ -1,0 +1,54 @@
+2025-08-04 08:07:46,861 p=3334 u=runner n=ansible ERROR| ERROR! this task 'include' has extra params, which is only allowed in the following modules: win_shell, add_host, command, set_fact, meta, raw, include_tasks, include_vars, shell, group_by, script, import_tasks, win_command, include_role, import_role
+
+The error appears to be in '/home/runner/work/devops/devops/ansible/playbooks/site.yml': line 22, column 7, but may
+be elsewhere in the file depending on the exact syntax problem.
+
+The offending line appears to be:
+
+  tasks:
+    - name: Include basic setup
+      ^ here
+
+2025-08-04 08:08:36,690 p=3343 u=runner n=ansible ERROR| ERROR! We were unable to read either as JSON nor YAML, these are the errors we got from each:
+JSON: Expecting value: line 1 column 1 (char 0)
+
+Syntax Error while loading YAML.
+  found a tab character where an indentation space is expected. while scanning a block scalar
+  in "<unicode string>", line 251, column 16
+found a tab character where an indentation space is expected
+  in "<unicode string>", line 252, column 11
+
+The error appears to be in '/home/runner/work/devops/devops/ansible/playbooks/nginx.yml': line 252, column 11, but may
+be elsewhere in the file depending on the exact syntax problem.
+
+The offending line appears to be:
+
+        block: |
+          	# Logging
+          ^ here
+There appears to be a tab character at the start of the line.
+
+YAML does not use tabs for formatting. Tabs should be replaced with spaces.
+
+For example:
+    - name: update tooling
+      vars:
+        version: 1.2.3
+#    ^--- there is a tab there.
+
+Should be written as:
+    - name: update tooling
+      vars:
+        version: 1.2.3
+# ^--- all spaces here.
+
+2025-08-04 08:08:50,065 p=3349 u=runner n=ansible INFO| playbook: playbooks/nginx.yml
+2025-08-04 08:09:00,182 p=3356 u=runner n=ansible INFO| playbook: playbooks/airflow.yml
+2025-08-04 08:09:00,554 p=3359 u=runner n=ansible INFO| playbook: playbooks/basic-setup.yml
+2025-08-04 08:09:00,927 p=3362 u=runner n=ansible INFO| playbook: playbooks/docker-setup.yml
+2025-08-04 08:09:01,306 p=3365 u=runner n=ansible INFO| playbook: playbooks/elk-stack.yml
+2025-08-04 08:09:01,680 p=3368 u=runner n=ansible INFO| playbook: playbooks/git.yml
+2025-08-04 08:09:02,159 p=3371 u=runner n=ansible INFO| playbook: playbooks/nginx.yml
+2025-08-04 08:09:02,530 p=3436 u=runner n=ansible INFO| playbook: playbooks/nifi.yml
+2025-08-04 08:09:02,958 p=3439 u=runner n=ansible INFO| playbook: playbooks/site.yml
+2025-08-04 08:09:03,329 p=3442 u=runner n=ansible INFO| playbook: playbooks/users.yml

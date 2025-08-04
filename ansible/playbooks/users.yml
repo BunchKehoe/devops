@@ -1,0 +1,145 @@
+---
+# User provisioning playbook with optional LDAP/Entra integration
+- name: User Management and Provisioning
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install LDAP client packages
+      package:
+        name:
+          - ldap-utils
+          - libnss-ldap
+          - libpam-ldap
+          - nscd
+        state: present
+      when: ldap_enabled | default(false)
+
+    - name: Create system users
+      user:
+        name: "{{ item.username }}"
+        groups: "{{ item.groups | default([]) }}"
+        shell: "{{ item.shell | default('/bin/bash') }}"
+        create_home: yes
+        state: present
+      loop: "{{ users_to_create }}"
+      when: users_to_create is defined
+
+    - name: Add SSH keys for users
+      authorized_key:
+        user: "{{ item.username }}"
+        key: "{{ item.ssh_key }}"
+        state: present
+      loop: "{{ users_to_create }}"
+      when: 
+        - users_to_create is defined
+        - item.ssh_key is defined
+
+    - name: Configure sudo access
+      lineinfile:
+        path: /etc/sudoers.d/{{ item.username }}
+        line: "{{ item.username }} ALL=(ALL) NOPASSWD:ALL"
+        create: yes
+        mode: '0440'
+        validate: 'visudo -cf %s'
+      loop: "{{ users_to_create }}"
+      when: 
+        - users_to_create is defined
+        - "'sudo' in item.groups | default([])"
+
+    - name: Configure LDAP authentication
+      template:
+        src: ldap.conf.j2
+        dest: /etc/ldap/ldap.conf
+        backup: yes
+      when: ldap_enabled | default(false)
+      notify: restart nscd
+
+    - name: Configure NSS for LDAP
+      template:
+        src: nsswitch.conf.j2
+        dest: /etc/nsswitch.conf
+        backup: yes
+      when: ldap_enabled | default(false)
+      notify: restart nscd
+
+    - name: Configure PAM for LDAP
+      template:
+        src: common-auth.j2
+        dest: /etc/pam.d/common-auth
+        backup: yes
+      when: ldap_enabled | default(false)
+
+    - name: Configure PAM session for LDAP
+      template:
+        src: common-session.j2
+        dest: /etc/pam.d/common-session
+        backup: yes
+      when: ldap_enabled | default(false)
+
+    - name: Create home directories for LDAP users
+      file:
+        path: /etc/skel
+        state: directory
+        mode: '0755'
+      when: ldap_enabled | default(false)
+
+    - name: Configure automatic home directory creation
+      lineinfile:
+        path: /etc/pam.d/common-session
+        line: "session required pam_mkhomedir.so skel=/etc/skel umask=0022"
+        insertafter: EOF
+      when: ldap_enabled | default(false)
+
+    - name: Install and configure fail2ban
+      package:
+        name: fail2ban
+        state: present
+      when: fail2ban_enabled | default(true)
+
+    - name: Configure fail2ban for SSH
+      template:
+        src: jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        backup: yes
+      when: fail2ban_enabled | default(true)
+      notify: restart fail2ban
+
+    - name: Start and enable fail2ban
+      service:
+        name: fail2ban
+        state: started
+        enabled: yes
+      when: fail2ban_enabled | default(true)
+
+    - name: Configure SSH hardening
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        backup: yes
+      loop:
+        - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin no' }
+        - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+        - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+        - { regexp: '^#?AuthorizedKeysFile', line: 'AuthorizedKeysFile .ssh/authorized_keys' }
+        - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries 3' }
+        - { regexp: '^#?LoginGraceTime', line: 'LoginGraceTime 30' }
+      notify: restart ssh
+
+  handlers:
+    - name: restart nscd
+      service:
+        name: nscd
+        state: restarted
+
+    - name: restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted
+
+    - name: restart ssh
+      service:
+        name: ssh
+        state: restarted

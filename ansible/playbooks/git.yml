@@ -1,0 +1,238 @@
+---
+# Git installation and configuration
+- name: Git Setup and Configuration
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install Git
+      package:
+        name: git
+        state: latest
+
+    - name: Install Git LFS
+      get_url:
+        url: https://github.com/git-lfs/git-lfs/releases/download/v3.4.0/git-lfs-linux-amd64-v3.4.0.tar.gz
+        dest: /tmp/git-lfs.tar.gz
+        mode: '0644'
+
+    - name: Extract Git LFS
+      unarchive:
+        src: /tmp/git-lfs.tar.gz
+        dest: /tmp/
+        remote_src: yes
+
+    - name: Install Git LFS binary
+      copy:
+        src: /tmp/git-lfs-3.4.0/git-lfs
+        dest: /usr/local/bin/git-lfs
+        mode: '0755'
+        remote_src: yes
+
+    - name: Initialize Git LFS
+      command: git lfs install --system
+      args:
+        creates: /etc/gitconfig
+
+    - name: Configure global Git settings
+      git_config:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        scope: system
+      loop:
+        - { name: 'init.defaultBranch', value: "{{ git_default_branch }}" }
+        - { name: 'core.editor', value: 'vim' }
+        - { name: 'pull.rebase', value: 'false' }
+        - { name: 'core.autocrlf', value: 'input' }
+        - { name: 'core.safecrlf', value: 'true' }
+      when: git_default_branch is defined
+
+    - name: Configure Git user settings for ansible user
+      git_config:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        scope: global
+      loop:
+        - { name: 'user.name', value: "{{ git_user_name }}" }
+        - { name: 'user.email', value: "{{ git_user_email }}" }
+      become: no
+      when: 
+        - git_user_name is defined and git_user_name != ""
+        - git_user_email is defined and git_user_email != ""
+
+    - name: Create Git hooks directory
+      file:
+        path: /opt/git-hooks
+        state: directory
+        mode: '0755'
+
+    - name: Install pre-commit hook template
+      copy:
+        content: |
+          #!/bin/bash
+          # Pre-commit hook for code quality checks
+          
+          # Check for merge conflict markers
+          if grep -r "<<<<<<< HEAD\|>>>>>>> \|=======" --include="*.py" --include="*.js" --include="*.yml" --include="*.yaml" .; then
+              echo "Error: Merge conflict markers found"
+              exit 1
+          fi
+          
+          # Check for debugging statements
+          if grep -r "console.log\|debugger\|pdb.set_trace\|import pdb" --include="*.py" --include="*.js" .; then
+              echo "Warning: Debug statements found"
+          fi
+          
+          # Check YAML syntax
+          for file in $(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(yml|yaml)$'); do
+              if ! python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+                  echo "Error: Invalid YAML syntax in $file"
+                  exit 1
+              fi
+          done
+          
+          exit 0
+        dest: /opt/git-hooks/pre-commit
+        mode: '0755'
+
+    - name: Install post-commit hook template
+      copy:
+        content: |
+          #!/bin/bash
+          # Post-commit hook for notifications
+          
+          echo "Commit completed: $(git log -1 --pretty=format:'%h - %s (%an)')"
+        dest: /opt/git-hooks/post-commit
+        mode: '0755'
+
+    - name: Configure global Git hooks path
+      git_config:
+        name: core.hooksPath
+        value: /opt/git-hooks
+        scope: system
+
+    - name: Install Git flow
+      package:
+        name: git-flow
+        state: present
+      ignore_errors: yes  # Not available on all distributions
+
+    - name: Create .gitignore template
+      copy:
+        content: |
+          # Byte-compiled / optimized / DLL files
+          __pycache__/
+          *.py[cod]
+          *$py.class
+          
+          # Distribution / packaging
+          .Python
+          build/
+          develop-eggs/
+          dist/
+          downloads/
+          eggs/
+          .eggs/
+          lib/
+          lib64/
+          parts/
+          sdist/
+          var/
+          wheels/
+          *.egg-info/
+          .installed.cfg
+          *.egg
+          
+          # PyInstaller
+          *.manifest
+          *.spec
+          
+          # Unit test / coverage reports
+          htmlcov/
+          .tox/
+          .coverage
+          .coverage.*
+          .cache
+          nosetests.xml
+          coverage.xml
+          *.cover
+          .hypothesis/
+          .pytest_cache/
+          
+          # Environments
+          .env
+          .venv
+          env/
+          venv/
+          ENV/
+          env.bak/
+          venv.bak/
+          
+          # IDE
+          .vscode/
+          .idea/
+          *.swp
+          *.swo
+          *~
+          
+          # OS
+          .DS_Store
+          Thumbs.db
+          
+          # Logs
+          logs
+          *.log
+          
+          # Runtime data
+          pids
+          *.pid
+          *.seed
+          *.pid.lock
+          
+          # Dependency directories
+          node_modules/
+          
+          # Optional npm cache directory
+          .npm
+          
+          # Optional REPL history
+          .node_repl_history
+          
+          # Output of 'npm pack'
+          *.tgz
+          
+          # Yarn Integrity file
+          .yarn-integrity
+          
+          # dotenv environment variables file
+          .env
+          
+          # Ansible
+          *.retry
+          .vault_pass
+          
+          # Terraform
+          *.tfstate
+          *.tfstate.*
+          .terraform/
+          
+          # Docker
+          .dockerignore
+        dest: /opt/git-hooks/.gitignore-template
+        mode: '0644'
+
+    - name: Display Git configuration
+      debug:
+        msg: |
+          Git installation completed!
+          
+          Configuration:
+          - Git version: Latest
+          - Git LFS: Installed
+          - Default branch: {{ git_default_branch | default('main') }}
+          - Global hooks: /opt/git-hooks
+          - Gitignore template: /opt/git-hooks/.gitignore-template
+          
+          To use the gitignore template:
+          cp /opt/git-hooks/.gitignore-template .gitignore
