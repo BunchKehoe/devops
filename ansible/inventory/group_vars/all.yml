@@ -43,7 +43,7 @@ docker_daemon_options:
   log-driver: fluentd
   log-opts:
     fluentd-address: localhost:24224
-    tag: docker.{{'{{'}}.Name{{'}}'}}
+    tag: "docker.{{ '{{' }}.Name{{ '}}' }}"
 
 # Docker Swarm configuration
 docker_swarm_addr: "{{ ansible_default_ipv4.address }}"
