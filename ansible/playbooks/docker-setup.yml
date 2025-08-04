@@ -6,6 +6,12 @@
   gather_facts: yes
 
   tasks:
+    - name: Check if Docker is already installed
+      command: docker --version
+      register: docker_installed
+      ignore_errors: yes
+      changed_when: false
+
     - name: Install Docker dependencies
       package:
         name:
@@ -15,13 +21,13 @@
           - curl
           - ca-certificates
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
 
     - name: Add Docker GPG key
       rpm_key:
         key: https://download.docker.com/linux/centos/gpg
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
 
     - name: Add Docker repository
       yum_repository:
@@ -32,7 +38,7 @@
         gpgkey: https://download.docker.com/linux/centos/gpg
         enabled: yes
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
 
     - name: Install Docker
       package:
@@ -42,6 +48,7 @@
           - containerd.io
           - docker-compose-plugin
         state: present
+      when: docker_installed.rc != 0
 
     - name: Add users to docker group
       user:
@@ -49,6 +56,7 @@
         groups: docker
         append: yes
       loop: "{{ docker_users }}"
+      ignore_errors: yes  # Don't fail if unable to modify user groups
 
     - name: Create Docker daemon configuration directory
       file:
@@ -61,13 +69,15 @@
         content: |
           {
             "storage-driver": "{{ docker_daemon_options['storage-driver'] }}",
-            "log-driver": "{{ docker_daemon_options['log-driver'] }}",
-            "log-opts": {{ docker_daemon_options['log-opts'] | to_json }},
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            },
             "live-restore": false,
             "userland-proxy": false,
             "experimental": false,
-            "metrics-addr": "0.0.0.0:9323",
-            "experimental": true
+            "metrics-addr": "0.0.0.0:9323"
           }
         dest: /etc/docker/daemon.json
         mode: '0644'
@@ -79,12 +89,17 @@
         state: started
         enabled: yes
 
+    - name: Install Docker SDK for Python (required for Ansible Docker modules)
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+
     - name: Initialize Docker Swarm
       community.docker.docker_swarm:
         state: present
         advertise_addr: "{{ docker_swarm_addr }}"
         listen_addr: "{{ docker_swarm_addr }}:{{ docker_swarm_port }}"
-        docker_host: "unix:///var/run/docker.sock"
       run_once: true
 
     - name: Get Swarm join token for workers
@@ -140,20 +155,6 @@
         - /opt/docker/logs
         - /opt/docker/data
 
-    - name: Configure Docker log rotation
-      copy:
-        content: |
-          {
-            "log-driver": "json-file",
-            "log-opts": {
-              "max-size": "10m",
-              "max-file": "3"
-            }
-          }
-        dest: /etc/docker/daemon.json
-        mode: '0644'
-        backup: yes
-      notify: restart docker
 
     - name: Configure Docker system prune cron job
       cron:
@@ -163,10 +164,9 @@
         job: "/usr/bin/docker system prune -af --volumes"
         user: root
 
-    - name: Install Docker monitoring tools
+    - name: Install additional monitoring tools
       pip:
         name:
-          - docker-py
           - requests
         state: present
         executable: pip3
@@ -240,6 +240,7 @@
         - "7946"  # Container network discovery
         - "4789"  # Overlay network traffic
       when: firewall_enabled | default(true) and ansible_os_family == "Debian"
+      ignore_errors: yes  # Don't fail if UFW is not available or configured
 
     - name: Configure firewall for Docker Swarm UDP (UFW)
       ufw:
@@ -250,6 +251,7 @@
         - "7946"  # Container network discovery
         - "4789"  # Overlay network traffic
       when: firewall_enabled | default(true) and ansible_os_family == "Debian"
+      ignore_errors: yes  # Don't fail if UFW is not available or configured
 
     - name: Display Docker Swarm information
       debug:
