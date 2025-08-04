@@ -506,3 +506,186 @@ disabled by setting deprecation_warnings=False in ansible.cfg.
   msg: 'An unhandled exception occurred while templating ''{''storage-driver'': ''overlay2'', ''log-driver'': ''fluentd'', ''log-opts'': {''fluentd-address'': ''localhost:24224'', ''tag'': ''docker.{{.Name}}''}}''. Error was a <class ''ansible.errors.AnsibleError''>, original message: template error while templating string: unexpected ''.''. String: docker.{{.Name}}. unexpected ''.'''
 2025-08-04 10:45:46,154 p=4790 u=root n=ansible INFO| PLAY RECAP *********************************************************************
 2025-08-04 10:45:46,154 p=4790 u=root n=ansible INFO| localhost                  : ok=3    changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:27:35,274 p=3589 u=root n=ansible INFO| playbook: playbooks/docker-setup.yml
+2025-08-04 11:27:56,696 p=3594 u=root n=ansible INFO| playbook: /tmp/test_docker_template.yml
+2025-08-04 11:28:04,708 p=3599 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:28:04,821 p=3599 u=root n=ansible INFO| PLAY [Test Docker template syntax issue] *******************************************************************************
+2025-08-04 11:28:04,846 p=3599 u=root n=ansible INFO| TASK [Test templating the problematic value] ***************************************************************************
+2025-08-04 11:28:04,860 p=3599 u=root n=ansible INFO| fatal: [localhost]: FAILED! => 
+  msg: 'An unhandled exception occurred while templating ''{''storage-driver'': ''overlay2'', ''log-driver'': ''fluentd'', ''log-opts'': {''fluentd-address'': ''localhost:24224'', ''tag'': ''docker.{{.Name}}''}}''. Error was a <class ''ansible.errors.AnsibleError''>, original message: template error while templating string: unexpected ''.''. String: docker.{{.Name}}. unexpected ''.'''
+2025-08-04 11:28:04,861 p=3599 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:28:04,861 p=3599 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:28:22,878 p=3612 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:28:22,896 p=3612 u=root n=ansible INFO| PLAY [Test Docker template syntax fix] *********************************************************************************
+2025-08-04 11:28:22,902 p=3612 u=root n=ansible INFO| TASK [Test templating the fixed value] *********************************************************************************
+2025-08-04 11:28:22,916 p=3612 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"storage-driver": "overlay2", "log-driver": "fluentd", "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}}'
+2025-08-04 11:28:22,916 p=3612 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:28:22,917 p=3612 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:28:53,028 p=3621 u=root n=ansible INFO| playbook: playbooks/docker-setup.yml
+2025-08-04 11:29:12,864 p=3629 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:29:12,885 p=3629 u=root n=ansible INFO| PLAY [Test Docker daemon configuration with fixed variables] ***********************************************************
+2025-08-04 11:29:12,891 p=3629 u=root n=ansible INFO| TASK [Display the Docker daemon configuration] *************************************************************************
+2025-08-04 11:29:12,905 p=3629 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"storage-driver": "overlay2", "log-driver": "fluentd", "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}''"}}'
+2025-08-04 11:29:12,907 p=3629 u=root n=ansible INFO| TASK [Test the problematic task from docker-setup.yml] *****************************************************************
+2025-08-04 11:29:12,921 p=3629 u=root n=ansible INFO| ok: [localhost] => 
+  msg:
+    log-driver: fluentd
+    log-opts:
+      fluentd-address: localhost:24224
+      tag: docker.{{.Name}}'
+    storage-driver: overlay2
+2025-08-04 11:29:12,922 p=3629 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:29:12,922 p=3629 u=root n=ansible INFO| localhost                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:29:50,809 p=3646 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:29:50,828 p=3646 u=root n=ansible INFO| PLAY [Test Docker daemon configuration with fixed variables] ***********************************************************
+2025-08-04 11:29:50,833 p=3646 u=root n=ansible INFO| TASK [Display the Docker daemon configuration] *************************************************************************
+2025-08-04 11:29:50,847 p=3646 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"storage-driver": "overlay2", "log-driver": "fluentd", "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}}'
+2025-08-04 11:29:50,849 p=3646 u=root n=ansible INFO| TASK [Test the problematic task from docker-setup.yml] *****************************************************************
+2025-08-04 11:29:50,863 p=3646 u=root n=ansible INFO| ok: [localhost] => 
+  msg:
+    log-driver: fluentd
+    log-opts:
+      fluentd-address: localhost:24224
+      tag: docker.{{.Name}}
+    storage-driver: overlay2
+2025-08-04 11:29:50,863 p=3646 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:29:50,863 p=3646 u=root n=ansible INFO| localhost                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:30:01,037 p=3654 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:30:01,048 p=3654 u=root n=ansible INFO| PLAY [Docker Swarm Setup] **********************************************************************************************
+2025-08-04 11:30:01,069 p=3654 u=root n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************
+2025-08-04 11:30:01,084 p=3654 u=root n=ansible INFO| fatal: [localhost]: UNREACHABLE! => changed=false 
+  msg: 'Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in "/tmp", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1754307001.0799441-3659-22134557615695 `" && echo ansible-tmp-1754307001.0799441-3659-22134557615695="` echo /root/.ansible/tmp/ansible-tmp-1754307001.0799441-3659-22134557615695 `" ), exited with result 1'
+  unreachable: true
+2025-08-04 11:30:01,085 p=3654 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:30:01,085 p=3654 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:30:40,123 p=3837 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:30:40,142 p=3837 u=root n=ansible INFO| PLAY [Test Docker daemon configuration (reproduces the original issue scenario)] ***************************************
+2025-08-04 11:30:40,148 p=3837 u=root n=ansible INFO| TASK [Show Docker daemon configuration (this would have failed before the fix)] ****************************************
+2025-08-04 11:30:40,162 p=3837 u=root n=ansible INFO| ok: [localhost] => 
+  msg: |-
+    Docker daemon.json will contain:
+    {
+      "storage-driver": "overlay2",
+      "log-driver": "fluentd",
+      "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}
+    }
+2025-08-04 11:30:40,164 p=3837 u=root n=ansible INFO| TASK [Verify the tag contains proper Docker template syntax] ***********************************************************
+2025-08-04 11:30:40,174 p=3837 u=root n=ansible INFO| ok: [localhost] => 
+  msg: 'Tag value is: docker.{{.Name}}'
+2025-08-04 11:30:40,175 p=3837 u=root n=ansible INFO| TASK [Confirm this matches Docker's expected Go template format] *******************************************************
+2025-08-04 11:30:40,183 p=3837 u=root n=ansible INFO| fatal: [localhost]: FAILED! => 
+  msg: 'template error while templating string: unexpected ''.''. String: docker_daemon_options[''log-opts''][''tag''] == "docker.{{.Name}}". unexpected ''.'''
+2025-08-04 11:30:40,183 p=3837 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:30:40,184 p=3837 u=root n=ansible INFO| localhost                  : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:31:01,217 p=3851 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:31:01,236 p=3851 u=root n=ansible INFO| PLAY [Test Docker daemon configuration (reproduces the original issue scenario)] ***************************************
+2025-08-04 11:31:01,242 p=3851 u=root n=ansible INFO| TASK [Show Docker daemon configuration (this would have failed before the fix)] ****************************************
+2025-08-04 11:31:01,257 p=3851 u=root n=ansible INFO| ok: [localhost] => 
+  msg: |-
+    Docker daemon.json will contain:
+    {
+      "storage-driver": "overlay2",
+      "log-driver": "fluentd",
+      "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}
+    }
+2025-08-04 11:31:01,258 p=3851 u=root n=ansible INFO| TASK [Verify the tag contains proper Docker template syntax] ***********************************************************
+2025-08-04 11:31:01,268 p=3851 u=root n=ansible INFO| ok: [localhost] => 
+  msg: 'Tag value is: docker.{{.Name}}'
+2025-08-04 11:31:01,270 p=3851 u=root n=ansible INFO| TASK [Confirm this matches Docker's expected Go template format] *******************************************************
+2025-08-04 11:31:01,278 p=3851 u=root n=ansible WARNING| [WARNING]: conditional statements should not include jinja2 templating delimiters such as {{ }} or {% %}. Found:
+docker_daemon_options['log-opts']['tag'] == "docker.{{'{{'}}.Name{{'}}'}}"
+
+2025-08-04 11:31:01,281 p=3851 u=root n=ansible INFO| ok: [localhost] => changed=false 
+  msg: 'SUCCESS: Docker template syntax is properly escaped and preserved'
+2025-08-04 11:31:01,282 p=3851 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:31:01,282 p=3851 u=root n=ansible INFO| localhost                  : ok=3    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:31:24,537 p=3863 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:31:24,557 p=3863 u=root n=ansible INFO| PLAY [Test all Docker daemon configurations] ***************************************************************************
+2025-08-04 11:31:24,563 p=3863 u=root n=ansible INFO| TASK [Test global configuration tag value] *****************************************************************************
+2025-08-04 11:31:24,578 p=3863 u=root n=ansible INFO| fatal: [localhost]: FAILED! => 
+  msg: 'An unhandled exception occurred while templating ''{{ lookup(''file'', ''../inventory/group_vars/all.yml'') | from_yaml }}''. Error was a <class ''ansible.errors.AnsibleLookupError''>, original message: The ''file'' lookup had an issue accessing the file ''../inventory/group_vars/all.yml''. file not found, use -vvvvv to see paths searched'
+2025-08-04 11:31:24,578 p=3863 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:31:24,579 p=3863 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:31:34,424 p=3871 u=root n=ansible INFO| playbook: playbooks/docker-setup.yml
+2025-08-04 11:34:58,826 p=3922 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:34:58,844 p=3922 u=root n=ansible INFO| PLAY [Reproduce original issue] ************************************************
+2025-08-04 11:34:58,850 p=3922 u=root n=ansible INFO| TASK [debug] *******************************************************************
+2025-08-04 11:34:58,862 p=3922 u=root n=ansible INFO| fatal: [localhost]: FAILED! => 
+  msg: 'An unhandled exception occurred while templating ''{''log-opts'': {''tag'': ''docker.{{.Name}}''}}''. Error was a <class ''ansible.errors.AnsibleError''>, original message: template error while templating string: unexpected ''.''. String: docker.{{.Name}}. unexpected ''.'''
+2025-08-04 11:34:58,862 p=3922 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:34:58,862 p=3922 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:34:59,227 p=3928 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:34:59,244 p=3928 u=root n=ansible INFO| PLAY [Test fixed syntax] *******************************************************
+2025-08-04 11:34:59,250 p=3928 u=root n=ansible INFO| TASK [debug] *******************************************************************
+2025-08-04 11:34:59,263 p=3928 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"log-opts": {"tag": "docker.{{.Name}}"}}'
+2025-08-04 11:34:59,263 p=3928 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:34:59,263 p=3928 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:34:59,626 p=3933 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:34:59,643 p=3933 u=root n=ansible INFO| PLAY [Test fixed syntax] *******************************************************
+2025-08-04 11:34:59,649 p=3933 u=root n=ansible INFO| TASK [debug] *******************************************************************
+2025-08-04 11:34:59,663 p=3933 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"storage-driver": "overlay2", "log-driver": "fluentd", "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}}'
+2025-08-04 11:34:59,663 p=3933 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:34:59,663 p=3933 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:35:00,031 p=3938 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:35:00,049 p=3938 u=root n=ansible INFO| PLAY [Test fixed syntax] *******************************************************
+2025-08-04 11:35:00,053 p=3938 u=root n=ansible INFO| TASK [debug] *******************************************************************
+2025-08-04 11:35:00,067 p=3938 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"storage-driver": "overlay2", "log-driver": "fluentd", "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}}'
+2025-08-04 11:35:00,068 p=3938 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:35:00,068 p=3938 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:35:00,434 p=3945 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:35:00,452 p=3945 u=root n=ansible INFO| PLAY [Test fixed syntax] *******************************************************
+2025-08-04 11:35:00,458 p=3945 u=root n=ansible INFO| TASK [debug] *******************************************************************
+2025-08-04 11:35:00,471 p=3945 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"log-opts": {"tag": "docker.{{.Name}}"}}'
+2025-08-04 11:35:00,471 p=3945 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:35:00,472 p=3945 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
