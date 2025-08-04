@@ -1,0 +1,101 @@
+# Local deployment variables - optimized for localhost
+---
+
+# Basic packages to install
+basic_packages:
+  - vim
+  - curl
+  - wget
+  - python3-pip
+  - htop
+  - net-tools
+  - unzip
+  - git
+
+# User management settings (local deployment typically uses current user)
+users_to_create: []
+
+# LDAP/Entra configuration (disabled for local deployment)
+ldap_enabled: false
+
+# Git configuration (can be customized by user)
+git_user_name: "Local User"
+git_user_email: "user@localhost"
+git_default_branch: "main"
+
+# Docker configuration
+docker_edition: ce
+docker_users:
+  - "{{ ansible_user_id }}"
+docker_daemon_options:
+  storage-driver: overlay2
+  log-driver: fluentd
+  log-opts:
+    fluentd-address: localhost:24224
+    tag: docker.{{.Name}}
+
+# Docker Swarm configuration (using localhost)
+docker_swarm_addr: "127.0.0.1"
+docker_swarm_port: 2377
+
+# Network configuration
+app_network: app_network
+logging_network: logging_network
+
+# Nginx configuration (local deployment)
+nginx_ssl_enabled: false
+nginx_ssl_cert_path: /etc/ssl/certs/nginx.crt
+nginx_ssl_key_path: /etc/ssl/private/nginx.key
+nginx_client_max_body_size: 64M
+
+# ELK Stack configuration (reduced resource usage for local)
+elasticsearch_version: "8.11.0"
+kibana_version: "8.11.0"
+fluentd_version: "v1.16"
+
+# Reduced heap size for local deployment
+elasticsearch_heap_size: 512m
+elasticsearch_cluster_name: elk-cluster-local
+elasticsearch_node_name: elk-node-local
+
+kibana_server_host: "127.0.0.1"
+kibana_server_port: 5601
+
+# Fluentd configuration
+fluentd_port: 24224
+fluentd_inputs:
+  - type: forward
+    port: 24224
+  - type: syslog
+    port: 5140
+
+# Apache Nifi configuration
+nifi_version: "1.24.0"
+nifi_web_port: 8443
+nifi_cluster_is_node: false  # Single node for local deployment
+nifi_cluster_node_protocol_port: 11443
+nifi_zookeeper_connect_string: "localhost:2181"
+
+# Apache Airflow configuration
+airflow_version: "2.7.3"
+airflow_web_port: 8080
+airflow_executor: LocalExecutor
+airflow_fernet_key: "{{ lookup('env', 'AIRFLOW_FERNET_KEY') | default('ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=', true) }}"
+
+# Database configuration (for Airflow) - using SQLite for local deployment
+postgres_db: airflow
+postgres_user: airflow
+postgres_password: "localpassword"
+
+# Logging retention (shorter for local development)
+log_retention_days: 7
+
+# Security settings (relaxed for local development)
+firewall_enabled: false  # Disabled for local development
+fail2ban_enabled: false  # Disabled for local development
+
+# SSL/TLS settings (disabled for local development)
+ssl_protocols:
+  - TLSv1.2
+  - TLSv1.3
+ssl_ciphers: "ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384"

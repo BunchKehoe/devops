@@ -50,6 +50,20 @@ devops/
 
 ## ⚡ Quick Start
 
+### Option 1: Local Deployment (Recommended for Development)
+
+Deploy the complete infrastructure on your local machine:
+
+```bash
+git clone <repository-url>
+cd devops/ansible
+./deploy-local.sh
+```
+
+For detailed local deployment instructions, see [LOCAL_DEPLOYMENT.md](LOCAL_DEPLOYMENT.md).
+
+### Option 2: Remote Server Deployment
+
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>

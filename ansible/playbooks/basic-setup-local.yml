@@ -1,0 +1,125 @@
+---
+# Basic packages installation playbook - Local version
+- name: Install Basic Packages (Local)
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Update package cache (Debian/Ubuntu)
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Update package cache (RedHat/CentOS)
+      yum:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install basic packages
+      package:
+        name: "{{ basic_packages }}"
+        state: present
+      register: package_install
+
+    - name: Install additional development tools
+      package:
+        name:
+          - build-essential
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install additional development tools (RedHat/CentOS)
+      package:
+        name:
+          - gcc
+          - gcc-c++
+          - make
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Python packages via pip
+      pip:
+        name:
+          - docker
+          - docker-compose
+          - requests
+          - pyyaml
+        state: present
+        executable: pip3
+
+    - name: Configure vim as default editor
+      alternatives:
+        name: editor
+        path: /usr/bin/vim.basic
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes  # Some systems may not have alternatives
+
+    - name: Create common directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/apps
+        - /opt/logs
+        - /opt/data
+        - /opt/config
+
+    - name: Set timezone
+      timezone:
+        name: UTC
+      notify: restart rsyslog
+      ignore_errors: yes  # Some containers don't allow timezone changes
+
+    - name: Check if NTP package is available
+      package_facts:
+        manager: auto
+
+    - name: Install NTP if available
+      package:
+        name: ntp
+        state: present
+      when: 
+        - ansible_os_family == "Debian"
+        - "'ntp' not in ansible_facts.packages or ansible_facts.packages['ntp'] is not defined"
+      ignore_errors: yes
+      notify: restart ntp
+
+    - name: Start and enable NTP service if available
+      service:
+        name: ntp
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes  # NTP might not be available in containers
+
+    - name: Enable systemd-timesyncd as fallback
+      service:
+        name: systemd-timesyncd
+        state: started
+        enabled: yes
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes
+
+  handlers:
+    - name: restart rsyslog
+      service:
+        name: rsyslog
+        state: restarted
+      ignore_errors: yes
+
+    - name: restart ntp
+      service:
+        name: ntp
+        state: restarted
+      ignore_errors: yes
