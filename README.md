@@ -1,18 +1,17 @@
 # DevOps Infrastructure Automation
 
-This repository contains comprehensive Ansible playbooks for setting up a complete Linux environment with containerized applications, monitoring, and logging infrastructure.
+Comprehensive Ansible playbooks for automated deployment of containerized applications, monitoring, and logging infrastructure with cross-platform support for Debian/Ubuntu and RHEL/AlmaLinux distributions.
 
 ## 🚀 Features
 
-- **Basic System Setup**: Essential packages and system configuration
-- **User Management**: Local users with optional Microsoft LDAP/Entra integration
-- **Git Configuration**: Local Git installation with hooks and templates
-- **Docker Swarm**: Industry-standard containerized application platform
-- **Nginx Reverse Proxy**: Load balancing and SSL-ready configuration
+- **Docker Swarm**: Industry-standard containerized application platform using CLI commands
+- **Cross-Platform**: Full support for Debian/Ubuntu and RHEL/AlmaLinux distributions  
 - **ELK Stack**: Complete logging solution (Fluentd + Elasticsearch + Kibana)
 - **Apache Nifi**: Data integration and processing platform
 - **Apache Airflow**: Workflow orchestration and scheduling
+- **Nginx Reverse Proxy**: Load balancing and SSL-ready configuration
 - **Security**: Fail2ban, firewall, SSH hardening, and SSL preparation
+- **User Management**: Local users with optional Microsoft LDAP/Entra integration
 
 ## 📁 Repository Structure
 
@@ -20,37 +19,31 @@ This repository contains comprehensive Ansible playbooks for setting up a comple
 devops/
 ├── ansible/                    # Main Ansible directory
 │   ├── inventory/             # Host inventories and variables
-│   │   ├── hosts.yml         # Define your target hosts here
-│   │   └── group_vars/
-│   │       └── all.yml       # Global configuration variables
+│   │   ├── hosts.yml         # Remote server hosts
+│   │   ├── local.yml         # Local deployment hosts
+│   │   └── group_vars/       # Global configuration variables
 │   ├── playbooks/            # Individual component playbooks
 │   │   ├── site.yml          # Main deployment playbook
 │   │   ├── basic-setup.yml   # Basic packages and system setup
+│   │   ├── docker-setup.yml  # Full Docker Swarm deployment
+│   │   ├── docker-setup-minimal.yml # Minimal Docker setup
 │   │   ├── users.yml         # User management and LDAP integration
-│   │   ├── git.yml           # Git installation and configuration
-│   │   ├── docker-setup.yml  # Docker Swarm deployment
 │   │   ├── nginx.yml         # Nginx reverse proxy setup
 │   │   ├── elk-stack.yml     # ELK stack deployment
 │   │   ├── nifi.yml          # Apache Nifi deployment
 │   │   └── airflow.yml       # Apache Airflow deployment
 │   ├── templates/            # Jinja2 configuration templates
-│   ├── files/                # Static files
-│   ├── ansible.cfg           # Ansible configuration
-│   └── README.md             # Detailed Ansible documentation
+│   ├── files/                # Static files and scripts
+│   ├── deploy-local.sh       # Local deployment script
+│   ├── deploy-minimal.sh     # Minimal Docker deployment script
+│   ├── test-cross-platform.sh # Cross-platform testing script
+│   └── DEPLOYMENT_GUIDE.md   # Comprehensive deployment guide
 └── README.md                 # This file
 ```
 
-## 🔧 Prerequisites
-
-- **Control Machine**: Ansible 2.9+ installed
-- **Target Hosts**: Ubuntu 18.04+ or CentOS/RHEL 7+
-- **Access**: SSH key-based authentication to target hosts
-- **Privileges**: Sudo access on target hosts
-- **Resources**: Minimum 4GB RAM, 2 CPUs, 20GB disk space per host
-
 ## ⚡ Quick Start
 
-### Option 1: Local Deployment (Recommended for Development)
+### Option 1: Local Development Deployment (Recommended)
 
 Deploy the complete infrastructure on your local machine:
 
@@ -60,60 +53,43 @@ cd devops/ansible
 ./deploy-local.sh
 ```
 
-For detailed local deployment instructions, see [LOCAL_DEPLOYMENT.md](LOCAL_DEPLOYMENT.md).
+**Selective deployment**:
+```bash
+# Deploy specific components
+./deploy-local.sh basic docker elk nginx
 
-### Option 2: Remote Server Deployment
+# Available components: basic, users, git, docker, elk, nginx, nifi, airflow
+```
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd devops/ansible
-   ```
+### Option 2: Minimal Docker Testing
 
-2. **Configure your inventory**:
-   ```bash
-   # Edit inventory/hosts.yml with your server details
-   vim inventory/hosts.yml
-   ```
+For testing Docker functionality with minimal dependencies:
 
-3. **Customize variables**:
-   ```bash
-   # Edit global variables
-   vim inventory/group_vars/all.yml
-   ```
+```bash
+cd devops/ansible
+./deploy-minimal.sh
+```
 
-4. **Deploy complete infrastructure**:
-   ```bash
-   # Deploy everything
-   ansible-playbook playbooks/site.yml
-   
-   # Or deploy specific components
-   ansible-playbook playbooks/basic-setup.yml
-   ansible-playbook playbooks/docker-setup.yml
-   ansible-playbook playbooks/elk-stack.yml
-   ```
+### Option 3: Remote Server Deployment
 
-## 🌐 Deployed Services
+1. **Configure inventory**: Edit `inventory/hosts.yml` with your server details
+2. **Customize variables**: Edit `inventory/group_vars/all.yml` 
+3. **Deploy**: `ansible-playbook playbooks/site.yml`
 
-After successful deployment, the following services will be available:
+## 🌐 Service Access
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| **Dashboard** | `http://your-server/` | Main landing page with service links |
-| **Kibana** | `http://your-server/kibana/` | Log analysis and visualization |
-| **Nifi** | `http://your-server/nifi/` | Data integration platform |
-| **Airflow** | `http://your-server/airflow/` | Workflow orchestration |
-| **Portainer** | `http://your-server/portainer/` | Docker management |
-| **Elasticsearch** | `http://your-server/elasticsearch/` | Search and analytics API |
+After deployment, services are available at:
 
-### Direct Access URLs
-- **Kibana**: `http://your-server:5601`
-- **Nifi**: `https://your-server:8443/nifi` (accept self-signed cert)
-- **Airflow**: `http://your-server:8080`
-- **Portainer**: `http://your-server:9000`
-- **Elasticsearch**: `http://your-server:9200`
+| Service | Local URL | Description |
+|---------|-----------|-------------|
+| **Dashboard** | http://localhost | Main landing page with service links |
+| **Kibana** | http://localhost:5601 | Log analysis and visualization |
+| **Nifi** | https://localhost:8443/nifi | Data integration platform |
+| **Airflow** | http://localhost:8080 | Workflow orchestration |
+| **Portainer** | http://localhost:9000 | Docker management |
+| **Elasticsearch** | http://localhost:9200 | Search and analytics API |
 
-## 🔐 Default Credentials
+### Default Credentials
 
 | Service | Username | Password |
 |---------|----------|----------|
@@ -121,100 +97,75 @@ After successful deployment, the following services will be available:
 | **Airflow** | admin | admin |
 | **Portainer** | admin | (set on first login) |
 
-## 🔧 Configuration Guide
+## 🔧 Scripts Explained
 
-### Basic Configuration
+### Deployment Scripts
 
-1. **Host Inventory** (`inventory/hosts.yml`):
-   ```yaml
-   all:
-     hosts:
-       your-server:
-         ansible_host: 192.168.1.10
-         ansible_user: ubuntu
-         ansible_ssh_private_key_file: ~/.ssh/id_rsa
-   ```
+- **`deploy-local.sh`**: Complete local infrastructure deployment
+  - Sets up local inventory targeting localhost
+  - Configures services for development with relaxed security
+  - Supports selective component deployment
+  - Creates comprehensive logging and monitoring stack
 
-2. **Global Variables** (`inventory/group_vars/all.yml`):
-   ```yaml
-   # User management
-   users_to_create:
-     - username: johndoe
-       groups: [sudo, docker]
-       ssh_key: "ssh-rsa AAAAB3NzaC1yc2E..."
-   
-   # Git configuration
-   git_user_name: "Your Name"
-   git_user_email: "your.email@example.com"
-   ```
+- **`deploy-minimal.sh`**: Minimal Docker deployment for testing
+  - Uses Docker CLI commands instead of Ansible modules
+  - Eliminates Python Docker SDK dependencies
+  - Creates basic Docker Swarm, networks, and volumes
+  - Ideal for troubleshooting Docker connectivity issues
 
-### LDAP/Entra Integration
+- **`test-cross-platform.sh`**: Cross-platform compatibility testing
+  - Validates Ansible syntax across all playbooks
+  - Tests both Debian/Ubuntu and RHEL/AlmaLinux configurations
+  - Checks package availability and service configurations
 
-To enable Microsoft LDAP/Entra integration:
+- **`test-local.sh`**: Local deployment validation
+  - Verifies all services are running correctly
+  - Checks service connectivity and health
+  - Validates log ingestion and monitoring
 
-```yaml
-# In inventory/group_vars/all.yml
-ldap_enabled: true
-ldap_server: "your-ldap-server.com"
-ldap_base_dn: "DC=company,DC=com"
-ldap_bind_dn: "CN=bind-user,OU=Service Accounts,DC=company,DC=com"
-ldap_bind_password: "your-bind-password"  # Use ansible-vault
-```
+### Utility Scripts (in `files/scripts/`)
 
-**Required Information for LDAP Setup**:
-- LDAP server hostname/IP
-- Base DN (Distinguished Name)
-- Bind user credentials
-- Search filters (optional)
+- **`health-check.sh`**: Service health monitoring
+  - Automated health checks for all deployed services
+  - Generates alerts for service failures
+  - Used by monitoring cron jobs
 
-### SSL Configuration
+- **`deploy.sh`**: Production deployment helper
+  - Enhanced deployment script for production environments
+  - Includes backup and rollback capabilities
+  - SSL certificate management
 
-The infrastructure is prepared for SSL but deployed without it initially. To enable SSL:
+- **`setup-ssl.sh`**: SSL/TLS configuration
+  - Automated SSL certificate installation
+  - Configures Nginx for HTTPS
+  - Supports Let's Encrypt and custom certificates
 
-1. **Obtain SSL certificates** (Let's Encrypt, commercial CA, or self-signed)
-2. **Place certificates**:
-   ```bash
-   # Certificate files
-   /etc/ssl/certs/nginx.crt
-   /etc/ssl/private/nginx.key
-   ```
-3. **Enable SSL**:
-   ```yaml
-   # In inventory/group_vars/all.yml
-   nginx_ssl_enabled: true
-   ```
-4. **Re-run Nginx playbook**:
-   ```bash
-   ansible-playbook playbooks/nginx.yml
-   ```
+- **`validate-docker-packages.sh`**: Docker dependency validation
+  - Validates Docker installation and dependencies
+  - Checks Python Docker SDK availability
+  - Used for troubleshooting Docker module issues
 
-**Required for SSL**:
-- Valid SSL certificate file (.crt or .pem)
-- Private key file (.key)
-- Optional: Certificate chain/intermediate certificates
+## 🔍 Cross-Platform Support
 
-## 📊 Monitoring and Logging
+Supports all major Linux distributions:
 
-### ELK Stack Features
-- **Centralized Logging**: All applications send logs to Fluentd
-- **External Log Support**: Configure external systems to send logs to port 5140 (syslog)
-- **Retention Policy**: Configurable log retention (default: 30 days)
-- **Index Patterns**: Pre-configured for Docker, system, and application logs
+| Distribution Family | Supported Versions | Package Manager | Firewall |
+|-------------------|-------------------|-----------------|----------|
+| **Debian/Ubuntu** | Ubuntu 20.04+, Debian 11+ | `apt` | `ufw` |
+| **RHEL/AlmaLinux** | RHEL 8+, AlmaLinux 8+, Rocky 8+ | `dnf` | `firewalld` |
 
-### Health Monitoring
-- Automated health checks for all services
-- System monitoring via cron jobs
-- Log rotation and cleanup
-- Resource usage monitoring
+**Key platform differences automatically handled**:
+- Time sync: `ntp` (Debian) vs `chrony` (RHEL)
+- SSH service: `ssh` vs `sshd`
+- LDAP packages: `ldap-utils` vs `openldap-clients`
+- Log ownership: `www-data:adm` vs `nginx:nginx`
 
-## 🛡️ Security Features
+## 🛠️ Prerequisites
 
-- **SSH Hardening**: Key-based auth, disabled root login, fail2ban
-- **Firewall**: UFW configured with service-specific rules
-- **User Management**: Secure user provisioning with proper permissions
-- **Container Security**: Non-privileged containers, resource limits
-- **SSL Ready**: Easy SSL/TLS enablement
-- **Access Control**: Service-specific access controls
+- **Control Machine**: Ansible 2.9+ installed
+- **Target Hosts**: Ubuntu 18.04+ or RHEL 8+
+- **Access**: SSH key-based authentication (remote) or sudo access (local)
+- **Resources**: Minimum 8GB RAM, 4 CPUs, 50GB disk space
 
 ## 🔍 Troubleshooting
 
@@ -223,54 +174,64 @@ The infrastructure is prepared for SSL but deployed without it initially. To ena
 # Docker services
 docker service ls
 
-# Container status
-docker ps
-
 # Service logs
 docker service logs <service-name>
 
 # System status
-systemctl status nginx
-systemctl status docker
+systemctl status nginx docker
 ```
 
 ### Common Issues
 
-1. **Services not starting**: Check available resources (RAM, disk space)
-2. **SSL issues**: Verify certificate paths and permissions
-3. **LDAP authentication**: Test LDAP connectivity and credentials
-4. **Log ingestion**: Verify Fluentd is running and accessible
+1. **Docker network creation errors**: Use minimal deployment to isolate issues
+2. **Port conflicts**: Check `netstat -tulpn | grep :<port>`
+3. **Resource constraints**: Monitor with `htop` and `df -h`
+4. **Permission issues**: Ensure user is in docker group
 
-### Log Locations
-- **Ansible logs**: `ansible.log`
-- **Nginx logs**: `/var/log/nginx/`
-- **Docker logs**: `docker logs <container-name>`
-- **System logs**: `/var/log/syslog`
+### Reset Local Deployment
+```bash
+# Stop all services and clean up
+docker service rm $(docker service ls -q)
+docker system prune -a --volumes -f
 
-## 🔄 Maintenance
+# Re-deploy
+./deploy-local.sh
+```
 
-### Regular Tasks
-- Update system packages: Re-run `basic-setup.yml`
-- Certificate renewal: Update SSL certificates and re-run `nginx.yml`
-- Log cleanup: Automated via retention policies
-- Security updates: Monitor and apply security patches
+## 📊 Architecture Decisions
 
-### Scaling
-- Add new hosts to inventory and re-run playbooks
-- Join additional Docker Swarm nodes
-- Configure load balancing for high availability
+### Docker CLI vs Ansible Modules
+
+The deployment uses **Docker CLI commands** instead of Ansible Docker modules to eliminate Python Docker SDK dependency issues:
+
+**Before (problematic)**:
+```yaml
+- name: Create network
+  community.docker.docker_network:
+    name: test_network
+    driver: overlay
+```
+
+**After (working)**:
+```yaml
+- name: Create Docker network using CLI
+  shell: docker network create --driver overlay --attachable test_network
+  when: network_exists.rc != 0
+```
+
+This approach provides reliable Docker deployment across all environments without complex dependency management.
 
 ## 📞 Support
 
-For issues, questions, or contributions:
-1. Check the troubleshooting section
-2. Review individual playbook documentation in `/ansible/README.md`
-3. Create an issue in the repository
-4. Consult the official documentation for individual components
+For detailed configuration, advanced deployment options, and troubleshooting:
+1. Check the comprehensive [DEPLOYMENT_GUIDE.md](ansible/DEPLOYMENT_GUIDE.md)
+2. Review service logs for specific error messages
+3. Use the testing scripts to validate your environment
+4. Create an issue in the repository for bug reports
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the individual files for details.
+This project is licensed under the MIT License.
 
 ---
 
