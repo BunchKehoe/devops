@@ -77,43 +77,53 @@
         state: started
         enabled: yes
 
-    - name: Install Docker SDK for Python (required for Ansible Docker modules)
-      pip:
-        name: docker
-        state: present
-        executable: pip3
+    - name: Check if Docker Swarm is already initialized
+      shell: docker node ls
+      register: swarm_status
+      changed_when: false
+      ignore_errors: yes
 
-    - name: Initialize Docker Swarm (minimal setup)
-      community.docker.docker_swarm:
-        state: present
-        advertise_addr: "127.0.0.1"
-        listen_addr: "127.0.0.1:2377"
+    - name: Initialize Docker Swarm using CLI
+      shell: docker swarm init --advertise-addr 127.0.0.1 --listen-addr 127.0.0.1:2377
+      when: swarm_status.rc != 0
       run_once: true
 
-    - name: Create minimal Docker network for testing
-      community.docker.docker_network:
-        name: "test_network"
-        driver: overlay
-        attachable: true
+    - name: Check if test_network exists
+      shell: docker network ls | grep test_network
+      register: network_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create Docker network using CLI
+      shell: docker network create --driver overlay --attachable test_network
+      when: network_exists.rc != 0
       run_once: true
 
-    - name: Create minimal Docker volume for testing
-      community.docker.docker_volume:
-        name: "test_volume"
-        driver: local
+    - name: Check if test_volume exists
+      shell: docker volume ls | grep test_volume
+      register: volume_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create Docker volume using CLI
+      shell: docker volume create test_volume
+      when: volume_exists.rc != 0
       run_once: true
 
     - name: Display minimal Docker setup information
       debug:
         msg: |
-          Minimal Docker setup completed!
+          Minimal Docker setup completed using Docker CLI!
           
           Docker Swarm initialized on: 127.0.0.1:2377
-          Test network created: test_network
+          Test network created: test_network (overlay, attachable)
           Test volume created: test_volume
           
-          Test commands:
+          Verification commands:
           - docker node ls
-          - docker network ls
+          - docker network ls --filter driver=overlay
           - docker volume ls
           - docker service create --name test-service --network test_network nginx:alpine
+          
+          Note: Using Docker CLI commands instead of Ansible Docker modules
+          to avoid Python Docker SDK dependency issues.
