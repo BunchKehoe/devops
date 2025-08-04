@@ -1,0 +1,73 @@
+# Example inventory configuration
+# Copy this file to inventory/hosts.yml and customize for your environment
+
+all:
+  hosts:
+    # Single server deployment example
+    devops-server:
+      ansible_host: 192.168.1.100
+      ansible_user: ubuntu
+      ansible_ssh_private_key_file: ~/.ssh/id_rsa
+      ansible_python_interpreter: /usr/bin/python3
+    
+    # Multi-server deployment example (uncomment and configure as needed)
+    # web-server-1:
+    #   ansible_host: 192.168.1.101
+    #   ansible_user: ubuntu
+    #   ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    #   ansible_python_interpreter: /usr/bin/python3
+    # 
+    # app-server-1:
+    #   ansible_host: 192.168.1.102
+    #   ansible_user: ubuntu
+    #   ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    #   ansible_python_interpreter: /usr/bin/python3
+
+  children:
+    # Group for Docker hosts
+    docker_hosts:
+      hosts:
+        devops-server:
+        # web-server-1:
+        # app-server-1:
+      vars:
+        docker_edition: ce
+        docker_package: docker-{{ docker_edition }}
+        docker_package_state: present
+        
+    # Group for web servers (Nginx)
+    web_servers:
+      hosts:
+        devops-server:
+        # web-server-1:
+      vars:
+        nginx_user: www-data
+        
+    # Group for ELK stack servers
+    elk_servers:
+      hosts:
+        devops-server:
+        # app-server-1:
+      vars:
+        elasticsearch_heap_size: 1g
+        
+    # Group for application servers
+    app_servers:
+      hosts:
+        devops-server:
+        # app-server-1:
+      vars:
+        java_packages:
+          - openjdk-11-jdk
+
+# Global variables (you can also put these in group_vars/all.yml)
+  vars:
+    # Time zone
+    timezone: UTC
+    
+    # NTP servers
+    ntp_servers:
+      - 0.pool.ntp.org
+      - 1.pool.ntp.org
+      - 2.pool.ntp.org
+      - 3.pool.ntp.org

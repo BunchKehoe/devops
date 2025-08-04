@@ -1,0 +1,385 @@
+---
+# ELK Stack deployment (Fluentd + Elasticsearch + Kibana)
+- name: Deploy ELK Stack
+  hosts: elk_servers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Create ELK stack directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/docker/elk
+        - /opt/docker/elk/elasticsearch
+        - /opt/docker/elk/kibana
+        - /opt/docker/elk/fluentd
+        - /opt/docker/elk/configs
+
+    - name: Create Elasticsearch configuration
+      copy:
+        content: |
+          cluster.name: "{{ elasticsearch_cluster_name }}"
+          node.name: "{{ elasticsearch_node_name }}"
+          
+          # Network settings
+          network.host: 0.0.0.0
+          http.port: 9200
+          transport.port: 9300
+          
+          # Discovery settings
+          discovery.type: single-node
+          
+          # Security settings (disabled for simplicity)
+          xpack.security.enabled: false
+          xpack.security.enrollment.enabled: false
+          xpack.security.http.ssl.enabled: false
+          xpack.security.transport.ssl.enabled: false
+          
+          # Memory settings
+          bootstrap.memory_lock: true
+          
+          # Index settings
+          action.auto_create_index: true
+          action.destructive_requires_name: true
+          
+          # Logging
+          logger.level: INFO
+        dest: /opt/docker/elk/elasticsearch/elasticsearch.yml
+        mode: '0644'
+
+    - name: Create Kibana configuration
+      copy:
+        content: |
+          server.host: "{{ kibana_server_host }}"
+          server.port: {{ kibana_server_port }}
+          server.name: "kibana"
+          
+          elasticsearch.hosts: ["http://elasticsearch:9200"]
+          
+          # Monitoring
+          monitoring.ui.container.elasticsearch.enabled: true
+          
+          # Security (disabled for simplicity)
+          xpack.security.enabled: false
+          xpack.encryptedSavedObjects.encryptionKey: "a7a6311933d3503b89bc2dbc36572c33a6c10925682e591bffcab6911c06786d"
+          
+          # Logging
+          logging.level: info
+          logging.root.appenders: ["default"]
+          
+          # UI settings
+          server.basePath: ""
+          server.rewriteBasePath: false
+        dest: /opt/docker/elk/kibana/kibana.yml
+        mode: '0644'
+
+    - name: Create Fluentd configuration
+      copy:
+        content: |
+          <source>
+            @type forward
+            port {{ fluentd_port }}
+            bind 0.0.0.0
+          </source>
+          
+          <source>
+            @type syslog
+            port 5140
+            bind 0.0.0.0
+            tag system.syslog
+          </source>
+          
+          <source>
+            @type tail
+            path /var/log/docker/*.log
+            pos_file /fluentd/log/docker.log.pos
+            tag docker.*
+            format json
+            time_format %Y-%m-%dT%H:%M:%S.%NZ
+          </source>
+          
+          <filter **>
+            @type record_transformer
+            <record>
+              hostname "#{Socket.gethostname}"
+              timestamp ${time}
+            </record>
+          </filter>
+          
+          <match docker.**>
+            @type elasticsearch
+            host elasticsearch
+            port 9200
+            index_name docker-logs
+            type_name _doc
+            logstash_format true
+            logstash_prefix docker
+            <buffer>
+              @type file
+              path /fluentd/log/buffer/docker
+              chunk_limit_size 1MB
+              flush_interval 5s
+              retry_max_interval 30
+              retry_forever true
+            </buffer>
+          </match>
+          
+          <match system.**>
+            @type elasticsearch
+            host elasticsearch
+            port 9200
+            index_name system-logs
+            type_name _doc
+            logstash_format true
+            logstash_prefix system
+            <buffer>
+              @type file
+              path /fluentd/log/buffer/system
+              chunk_limit_size 1MB
+              flush_interval 5s
+              retry_max_interval 30
+              retry_forever true
+            </buffer>
+          </match>
+          
+          <match **>
+            @type elasticsearch
+            host elasticsearch
+            port 9200
+            index_name application-logs
+            type_name _doc
+            logstash_format true
+            logstash_prefix application
+            <buffer>
+              @type file
+              path /fluentd/log/buffer/application
+              chunk_limit_size 1MB
+              flush_interval 5s
+              retry_max_interval 30
+              retry_forever true
+            </buffer>
+          </match>
+        dest: /opt/docker/elk/fluentd/fluent.conf
+        mode: '0644'
+
+    - name: Create Fluentd Dockerfile
+      copy:
+        content: |
+          FROM fluent/fluentd:{{ fluentd_version }}-debian
+          
+          USER root
+          
+          RUN apt-get update && apt-get install -y \
+              build-essential \
+              ruby-dev \
+              && rm -rf /var/lib/apt/lists/*
+          
+          RUN gem install fluent-plugin-elasticsearch --no-document
+          
+          USER fluent
+          
+          COPY fluent.conf /fluentd/etc/fluent.conf
+          
+          EXPOSE 24224 5140
+        dest: /opt/docker/elk/fluentd/Dockerfile
+        mode: '0644'
+
+    - name: Create ELK stack Docker Compose file
+      copy:
+        content: |
+          version: '3.8'
+          
+          services:
+            elasticsearch:
+              image: docker.elastic.co/elasticsearch/elasticsearch:{{ elasticsearch_version }}
+              container_name: elasticsearch
+              environment:
+                - ES_JAVA_OPTS=-Xms{{ elasticsearch_heap_size }} -Xmx{{ elasticsearch_heap_size }}
+                - ELASTIC_PASSWORD=elastic
+              volumes:
+                - elasticsearch_data:/usr/share/elasticsearch/data
+                - /opt/docker/elk/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+              ports:
+                - "9200:9200"
+                - "9300:9300"
+              networks:
+                - {{ logging_network }}
+                - {{ app_network }}
+              ulimits:
+                memlock:
+                  soft: -1
+                  hard: -1
+              deploy:
+                resources:
+                  limits:
+                    memory: 2G
+                  reservations:
+                    memory: 1G
+                placement:
+                  constraints: [node.role == manager]
+          
+            kibana:
+              image: docker.elastic.co/kibana/kibana:{{ kibana_version }}
+              container_name: kibana
+              depends_on:
+                - elasticsearch
+              volumes:
+                - kibana_data:/usr/share/kibana/data
+                - /opt/docker/elk/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+              ports:
+                - "5601:5601"
+              networks:
+                - {{ logging_network }}
+                - {{ app_network }}
+              deploy:
+                resources:
+                  limits:
+                    memory: 1G
+                  reservations:
+                    memory: 512M
+                placement:
+                  constraints: [node.role == manager]
+          
+            fluentd:
+              build:
+                context: /opt/docker/elk/fluentd
+                dockerfile: Dockerfile
+              container_name: fluentd
+              depends_on:
+                - elasticsearch
+              volumes:
+                - /opt/docker/elk/fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+                - /var/log/docker:/var/log/docker:ro
+                - fluentd_data:/fluentd/log
+              ports:
+                - "24224:24224"
+                - "24224:24224/udp"
+                - "5140:5140"
+                - "5140:5140/udp"
+              networks:
+                - {{ logging_network }}
+                - {{ app_network }}
+              deploy:
+                resources:
+                  limits:
+                    memory: 512M
+                  reservations:
+                    memory: 256M
+          
+          volumes:
+            elasticsearch_data:
+              external: true
+            kibana_data:
+              external: true
+            fluentd_data:
+          
+          networks:
+            {{ logging_network }}:
+              external: true
+            {{ app_network }}:
+              external: true
+        dest: /opt/docker/elk/docker-compose.yml
+        mode: '0644'
+
+    - name: Build Fluentd image
+      community.docker.docker_image:
+        name: custom-fluentd
+        build:
+          path: /opt/docker/elk/fluentd
+        source: build
+        state: present
+
+    - name: Deploy ELK stack
+      command: docker stack deploy -c /opt/docker/elk/docker-compose.yml elk
+      args:
+        chdir: /opt/docker/elk
+
+    - name: Wait for Elasticsearch to be ready
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:9200/_cluster/health"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Create Kibana index patterns
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:5601/api/saved_objects/index-pattern/docker-*"
+        method: POST
+        headers:
+          Content-Type: application/json
+          kbn-xsrf: true
+        body_format: json
+        body:
+          attributes:
+            title: "docker-*"
+            timeFieldName: "@timestamp"
+      ignore_errors: yes
+
+    - name: Create system logs index pattern
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:5601/api/saved_objects/index-pattern/system-*"
+        method: POST
+        headers:
+          Content-Type: application/json
+          kbn-xsrf: true
+        body_format: json
+        body:
+          attributes:
+            title: "system-*"
+            timeFieldName: "@timestamp"
+      ignore_errors: yes
+
+    - name: Configure log retention policy
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:9200/_ilm/policy/delete-after-{{ log_retention_days }}-days"
+        method: PUT
+        headers:
+          Content-Type: application/json
+        body_format: json
+        body:
+          policy:
+            phases:
+              delete:
+                min_age: "{{ log_retention_days }}d"
+                actions:
+                  delete: {}
+
+    - name: Configure firewall for ELK stack
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "9200"   # Elasticsearch
+        - "5601"   # Kibana
+        - "24224"  # Fluentd
+        - "5140"   # Syslog
+      when: firewall_enabled | default(true)
+
+    - name: Display ELK stack information
+      debug:
+        msg: |
+          ELK Stack deployed successfully!
+          
+          Services:
+          - Elasticsearch: http://{{ ansible_default_ipv4.address }}:9200
+          - Kibana: http://{{ ansible_default_ipv4.address }}:5601
+          - Fluentd: {{ ansible_default_ipv4.address }}:24224 (logs)
+          - Syslog: {{ ansible_default_ipv4.address }}:5140 (syslog)
+          
+          To send logs from external systems:
+          - Docker: --log-driver=fluentd --log-opt fluentd-address={{ ansible_default_ipv4.address }}:24224
+          - Syslog: Configure to send to {{ ansible_default_ipv4.address }}:5140
+          
+          Default index patterns created:
+          - docker-* (Docker container logs)
+          - system-* (System logs)
+          - application-* (Application logs)
+          
+          Log retention: {{ log_retention_days }} days

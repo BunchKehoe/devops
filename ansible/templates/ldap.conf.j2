@@ -1,0 +1,27 @@
+# LDAP client configuration
+BASE {{ ldap_base_dn }}
+URI ldap://{{ ldap_server }}
+
+# LDAP version
+LDAP_VERSION 3
+
+# Search scope
+SCOPE sub
+
+# TLS settings
+TLS_CACERTDIR /etc/ssl/certs
+TLS_REQCERT allow
+
+# Bind settings
+BINDDN {{ ldap_bind_dn }}
+BINDPW {{ ldap_bind_password }}
+
+# Search filter
+PBASE {{ ldap_base_dn }}
+NBASE {{ ldap_base_dn }}
+SBASE {{ ldap_base_dn }}
+
+# Timeout settings
+TIMELIMIT 10
+BIND_TIMELIMIT 10
+NETWORK_TIMEOUT 10

@@ -1,0 +1,429 @@
+---
+# Apache Nifi deployment
+- name: Deploy Apache Nifi
+  hosts: app_servers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Create Nifi directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /opt/docker/nifi
+        - /opt/docker/nifi/conf
+        - /opt/docker/nifi/scripts
+
+    - name: Generate Nifi keystore and truststore
+      shell: |
+        cd /opt/docker/nifi/conf
+        
+        # Generate keystore
+        if [ ! -f keystore.jks ]; then
+            keytool -genkeypair -alias nifi-key -keyalg RSA -keysize 2048 -validity 365 \
+                -keystore keystore.jks -storepass nifipassword -keypass nifipassword \
+                -dname "CN={{ ansible_default_ipv4.address }}, OU=DevOps, O=Organization, L=City, ST=State, C=US"
+        fi
+        
+        # Generate truststore
+        if [ ! -f truststore.jks ]; then
+            keytool -export -alias nifi-key -keystore keystore.jks -storepass nifipassword \
+                -file nifi-cert.pem
+            keytool -import -alias nifi-cert -keystore truststore.jks -storepass nifipassword \
+                -file nifi-cert.pem -noprompt
+        fi
+      args:
+        creates: /opt/docker/nifi/conf/keystore.jks
+
+    - name: Create Nifi configuration
+      copy:
+        content: |
+          # Core Properties
+          nifi.flow.configuration.file=./conf/flow.xml.gz
+          nifi.flow.configuration.archive.enabled=true
+          nifi.flow.configuration.archive.dir=./conf/archive/
+          nifi.flow.configuration.archive.max.time=30 days
+          nifi.flow.configuration.archive.max.storage=500 MB
+          nifi.flowcontroller.autoResumeState=true
+          nifi.flowcontroller.graceful.shutdown.period=10 sec
+          nifi.flowservice.writedelay.interval=500 ms
+          nifi.administrative.yield.duration=30 sec
+          nifi.bored.yield.duration=10 millis
+          nifi.queue.backpressure.count=10000
+          nifi.queue.backpressure.size=1 GB
+          
+          # Web Properties
+          nifi.web.war.directory=./lib
+          nifi.web.http.host=
+          nifi.web.http.port=
+          nifi.web.http.network.interface.default=
+          nifi.web.https.host=0.0.0.0
+          nifi.web.https.port={{ nifi_web_port }}
+          nifi.web.https.network.interface.default=
+          nifi.web.jetty.working.directory=./work/jetty
+          nifi.web.jetty.threads=200
+          nifi.web.max.header.size=16 KB
+          nifi.web.proxy.context.path=/nifi
+          nifi.web.proxy.host={{ ansible_default_ipv4.address }}:80
+          
+          # Security Properties
+          nifi.sensitive.props.key=nifipassword
+          nifi.sensitive.props.key.protected=
+          nifi.sensitive.props.algorithm=PBEWITHMD5ANDDES
+          nifi.sensitive.props.provider=BC
+          nifi.sensitive.props.additional.keys=
+          
+          nifi.security.keystore=/opt/nifi/nifi-current/conf/keystore.jks
+          nifi.security.keystoreType=JKS
+          nifi.security.keystorePasswd=nifipassword
+          nifi.security.keyPasswd=nifipassword
+          nifi.security.truststore=/opt/nifi/nifi-current/conf/truststore.jks
+          nifi.security.truststoreType=JKS
+          nifi.security.truststorePasswd=nifipassword
+          nifi.security.needClientAuth=false
+          nifi.security.user.authorizer=managed-authorizer
+          nifi.security.user.login.identity.provider=single-user-provider
+          nifi.security.ocsp.responder.url=
+          nifi.security.ocsp.responder.certificate=
+          
+          # Cluster Properties
+          nifi.cluster.is.node={{ nifi_cluster_is_node | lower }}
+          nifi.cluster.node.address={{ ansible_default_ipv4.address }}
+          nifi.cluster.node.protocol.port={{ nifi_cluster_node_protocol_port }}
+          nifi.cluster.node.protocol.threads=10
+          nifi.cluster.node.protocol.max.threads=50
+          nifi.cluster.node.event.history.size=25
+          nifi.cluster.node.connection.timeout=5 sec
+          nifi.cluster.node.read.timeout=5 sec
+          nifi.cluster.node.max.concurrent.requests=100
+          nifi.cluster.firewall.file=
+          nifi.cluster.flow.election.max.wait.time=5 mins
+          nifi.cluster.flow.election.max.candidates=
+          
+          # ZooKeeper Properties
+          nifi.zookeeper.connect.string={{ nifi_zookeeper_connect_string }}
+          nifi.zookeeper.connect.timeout=3 secs
+          nifi.zookeeper.session.timeout=3 secs
+          nifi.zookeeper.root.node=/nifi
+          
+          # Kerberos Properties
+          nifi.kerberos.krb5.file=
+          nifi.kerberos.service.principal=
+          nifi.kerberos.service.keytab.location=
+          nifi.kerberos.spnego.principal=
+          nifi.kerberos.spnego.keytab.location=
+          nifi.kerberos.spnego.authentication.expiration=12 hours
+          
+          # Variable Registry Properties
+          nifi.variable.registry.properties=
+          
+          # Analytics Properties
+          nifi.analytics.predict.enabled=false
+          nifi.analytics.predict.interval=3 mins
+          nifi.analytics.query.interval=5 mins
+          nifi.analytics.connection.model.implementation=org.apache.nifi.controller.status.analytics.models.OrdinaryLeastSquares
+          nifi.analytics.connection.model.score.name=rSquared
+          nifi.analytics.connection.model.score.threshold=.90
+        dest: /opt/docker/nifi/conf/nifi.properties
+        mode: '0644'
+
+    - name: Create Nifi authorizers configuration
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+          <authorizers>
+              <userGroupProvider>
+                  <identifier>file-user-group-provider</identifier>
+                  <class>org.apache.nifi.authorization.FileUserGroupProvider</class>
+                  <property name="Users File">./conf/users.xml</property>
+                  <property name="Legacy Authorized Users File"></property>
+                  <property name="Initial User Identity 1">admin</property>
+              </userGroupProvider>
+              
+              <accessPolicyProvider>
+                  <identifier>file-access-policy-provider</identifier>
+                  <class>org.apache.nifi.authorization.FileAccessPolicyProvider</class>
+                  <property name="User Group Provider">file-user-group-provider</property>
+                  <property name="Authorizations File">./conf/authorizations.xml</property>
+                  <property name="Initial Admin Identity">admin</property>
+                  <property name="Legacy Authorized Users File"></property>
+                  <property name="Node Identity 1">CN={{ ansible_default_ipv4.address }}, OU=DevOps</property>
+              </accessPolicyProvider>
+              
+              <authorizer>
+                  <identifier>managed-authorizer</identifier>
+                  <class>org.apache.nifi.authorization.StandardManagedAuthorizer</class>
+                  <property name="Access Policy Provider">file-access-policy-provider</property>
+              </authorizer>
+          </authorizers>
+        dest: /opt/docker/nifi/conf/authorizers.xml
+        mode: '0644'
+
+    - name: Create Nifi login identity providers
+      copy:
+        content: |
+          <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+          <loginIdentityProviders>
+              <provider>
+                  <identifier>single-user-provider</identifier>
+                  <class>org.apache.nifi.authentication.single.user.SingleUserLoginIdentityProvider</class>
+                  <property name="Username">admin</property>
+                  <property name="Password">nifipassword</property>
+              </provider>
+          </loginIdentityProviders>
+        dest: /opt/docker/nifi/conf/login-identity-providers.xml
+        mode: '0644'
+
+    - name: Create Nifi bootstrap configuration
+      copy:
+        content: |
+          # Java command to use when running NiFi
+          java=java
+          
+          # Username to run NiFi as. (Requires NiFi to be run by root)
+          run.as=nifi
+          
+          # Configure where NiFi's lib and conf directories live
+          lib.dir=./lib
+          conf.dir=./conf
+          
+          # How long to wait after telling NiFi to shutdown before explicitly killing the Process
+          graceful.shutdown.seconds=20
+          
+          # Disable JSR 199 so that we can use JSP's without running a JDK
+          java.arg.1=-Dorg.apache.jasper.compiler.disablejsr199=true
+          
+          # JVM memory settings
+          java.arg.2=-Xms1g
+          java.arg.3=-Xmx2g
+          
+          # Enable Remote Debugging
+          #java.arg.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=8000
+          
+          # allowRestrictedHeaders is required for Cluster/Node communications to work properly
+          java.arg.4=-Djava.net.useSystemProxies=true
+          java.arg.5=-Dsun.net.useExclusiveBind=false
+          java.arg.6=-Djava.protocol.handler.pkgs=sun.net.www.protocol
+          
+          # The G1GC is still considered experimental but has proven to be very beneficial for heap sizes greater than 4GB
+          java.arg.13=-XX:+UseG1GC
+          
+          # Set headless mode by default
+          java.arg.14=-Djava.awt.headless=true
+          
+          # Master key in hexadecimal format for encrypted sensitive configuration values
+          nifi.bootstrap.sensitive.key=
+          
+          # Sets the provider of SecureRandom to /dev/urandom to prevent blocking on VMs
+          java.arg.15=-Djava.security.egd=file:/dev/urandom
+          
+          # Requires JAAS to use only the provided JAAS configuration to authenticate a Subject, without using any "fallback" methods (such as prompting for username/password)
+          # Please see https://docs.oracle.com/javase/8/docs/technotes/guides/security/jgss/single-signon.html, section "EXCEPTIONS TO THE MODEL"
+          java.arg.16=-Djavax.security.auth.useSubjectCredsOnly=true
+          
+          # Zookeeper 3.5 now includes an Admin Server that starts on port 8080, since NiFi is already using that port disable by default.
+          java.arg.17=-Dzookeeper.admin.enableServer=false
+          
+          ###
+          # Notification Services for notifying interested parties when NiFi is stopped, started, dies
+          ###
+          
+          # XML File that contains the definitions of the notification services
+          notification.services.file=./conf/bootstrap-notification-services.xml
+          
+          # In the case that we are unable to send a notification for an event, how many times should we retry?
+          notification.max.attempts=5
+          
+          # Comma-separated list of identifiers that are present in the notification.services.file; which services should be used to notify when NiFi is started?
+          #notification.services.start=email-notification
+          
+          # Comma-separated list of identifiers that are present in the notification.services.file; which services should be used to notify when NiFi is stopped?
+          #notification.services.stop=email-notification
+          
+          # Comma-separated list of identifiers that are present in the notification.services.file; which services should be used to notify when NiFi dies?
+          #notification.services.dead=email-notification
+        dest: /opt/docker/nifi/conf/bootstrap.conf
+        mode: '0644'
+
+    - name: Create Nifi Docker Compose file
+      copy:
+        content: |
+          version: '3.8'
+          
+          services:
+            zookeeper:
+              image: zookeeper:3.8
+              container_name: nifi-zookeeper
+              ports:
+                - "2181:2181"
+              environment:
+                ZOO_MY_ID: 1
+                ZOO_SERVERS: server.1=zookeeper:2888:3888;2181
+              volumes:
+                - zookeeper_data:/data
+                - zookeeper_logs:/datalog
+              networks:
+                - {{ app_network }}
+              deploy:
+                resources:
+                  limits:
+                    memory: 512M
+                  reservations:
+                    memory: 256M
+          
+            nifi:
+              image: apache/nifi:{{ nifi_version }}
+              container_name: nifi
+              depends_on:
+                - zookeeper
+              ports:
+                - "{{ nifi_web_port }}:{{ nifi_web_port }}"
+                - "{{ nifi_cluster_node_protocol_port }}:{{ nifi_cluster_node_protocol_port }}"
+              environment:
+                # JVM settings
+                NIFI_JVM_HEAP_INIT: 1g
+                NIFI_JVM_HEAP_MAX: 2g
+                
+                # Web settings
+                NIFI_WEB_HTTPS_PORT: {{ nifi_web_port }}
+                NIFI_WEB_HTTPS_HOST: 0.0.0.0
+                NIFI_WEB_PROXY_HOST: {{ ansible_default_ipv4.address }}:80
+                NIFI_WEB_PROXY_CONTEXT_PATH: /nifi
+                
+                # Security
+                SINGLE_USER_CREDENTIALS_USERNAME: admin
+                SINGLE_USER_CREDENTIALS_PASSWORD: nifipassword
+                
+                # Cluster settings
+                NIFI_CLUSTER_IS_NODE: 'true'
+                NIFI_CLUSTER_NODE_PROTOCOL_PORT: {{ nifi_cluster_node_protocol_port }}
+                NIFI_ZK_CONNECT_STRING: zookeeper:2181
+                NIFI_ELECTION_MAX_WAIT: '5 mins'
+                NIFI_ELECTION_MAX_CANDIDATES: 3
+                
+                # Logging
+                NIFI_LOG_LEVEL: INFO
+              volumes:
+                - nifi_data:/opt/nifi/nifi-current/data
+                - nifi_logs:/opt/nifi/nifi-current/logs
+                - nifi_conf:/opt/nifi/nifi-current/conf
+                - /opt/docker/nifi/conf/nifi.properties:/opt/nifi/nifi-current/conf/nifi.properties:ro
+                - /opt/docker/nifi/conf/authorizers.xml:/opt/nifi/nifi-current/conf/authorizers.xml:ro
+                - /opt/docker/nifi/conf/login-identity-providers.xml:/opt/nifi/nifi-current/conf/login-identity-providers.xml:ro
+                - /opt/docker/nifi/conf/bootstrap.conf:/opt/nifi/nifi-current/conf/bootstrap.conf:ro
+                - /opt/docker/nifi/conf/keystore.jks:/opt/nifi/nifi-current/conf/keystore.jks:ro
+                - /opt/docker/nifi/conf/truststore.jks:/opt/nifi/nifi-current/conf/truststore.jks:ro
+              networks:
+                - {{ app_network }}
+                - {{ logging_network }}
+              logging:
+                driver: fluentd
+                options:
+                  fluentd-address: localhost:24224
+                  tag: nifi
+              deploy:
+                resources:
+                  limits:
+                    memory: 3G
+                  reservations:
+                    memory: 2G
+                placement:
+                  constraints: [node.role == manager]
+          
+          volumes:
+            nifi_data:
+              external: true
+            nifi_logs:
+            nifi_conf:
+            zookeeper_data:
+            zookeeper_logs:
+          
+          networks:
+            {{ app_network }}:
+              external: true
+            {{ logging_network }}:
+              external: true
+        dest: /opt/docker/nifi/docker-compose.yml
+        mode: '0644'
+
+    - name: Create Nifi health check script
+      copy:
+        content: |
+          #!/bin/bash
+          # Nifi health check script
+          
+          NIFI_URL="https://localhost:{{ nifi_web_port }}/nifi"
+          
+          # Check if Nifi is responding
+          HTTP_STATUS=$(curl -k -s -o /dev/null -w "%{http_code}" "$NIFI_URL")
+          
+          if [ "$HTTP_STATUS" -eq "200" ]; then
+              echo "$(date): Nifi is healthy - HTTP $HTTP_STATUS"
+              exit 0
+          else
+              echo "$(date): Nifi health check failed - HTTP $HTTP_STATUS"
+              exit 1
+          fi
+        dest: /opt/docker/nifi/scripts/health-check.sh
+        mode: '0755'
+
+    - name: Deploy Nifi stack
+      command: docker stack deploy -c /opt/docker/nifi/docker-compose.yml nifi
+      args:
+        chdir: /opt/docker/nifi
+
+    - name: Wait for Nifi to be ready
+      uri:
+        url: "https://{{ ansible_default_ipv4.address }}:{{ nifi_web_port }}/nifi"
+        method: GET
+        validate_certs: no
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 20
+
+    - name: Configure firewall for Nifi
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "{{ nifi_web_port }}"
+        - "{{ nifi_cluster_node_protocol_port }}"
+        - "2181"  # ZooKeeper
+      when: firewall_enabled | default(true)
+
+    - name: Display Nifi information
+      debug:
+        msg: |
+          Apache Nifi deployed successfully!
+          
+          Access Information:
+          - Nifi UI: https://{{ ansible_default_ipv4.address }}:{{ nifi_web_port }}/nifi
+          - Via Nginx proxy: http://{{ ansible_default_ipv4.address }}/nifi/
+          
+          Default Credentials:
+          - Username: admin
+          - Password: nifipassword
+          
+          Services:
+          - Nifi: {{ ansible_default_ipv4.address }}:{{ nifi_web_port }}
+          - ZooKeeper: {{ ansible_default_ipv4.address }}:2181
+          
+          Features:
+          - Single user authentication
+          - HTTPS enabled with self-signed certificates
+          - Cluster ready (single node initially)
+          - Logging to ELK stack via Fluentd
+          - Health monitoring
+          - Proxy configuration for Nginx
+          
+          Configuration files:
+          - Main config: /opt/docker/nifi/conf/nifi.properties
+          - Authorizers: /opt/docker/nifi/conf/authorizers.xml
+          - Login providers: /opt/docker/nifi/conf/login-identity-providers.xml
+          
+          Note: Accept the self-signed certificate warning in your browser

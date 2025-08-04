@@ -1,0 +1,394 @@
+---
+# Nginx proxy configuration for Docker Swarm
+- name: Setup Nginx Proxy for Docker Swarm
+  hosts: web_servers
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Install Nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: restart nginx
+
+    - name: Create Nginx configuration directory
+      file:
+        path: /etc/nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Create upstream configuration for Docker services
+      copy:
+        content: |
+          # Upstream definitions for Docker Swarm services
+          upstream kibana {
+              server 127.0.0.1:5601;
+          }
+          
+          upstream nifi {
+              server 127.0.0.1:8443;
+          }
+          
+          upstream airflow {
+              server 127.0.0.1:8080;
+          }
+          
+          upstream portainer {
+              server 127.0.0.1:9000;
+          }
+          
+          upstream elasticsearch {
+              server 127.0.0.1:9200;
+          }
+        dest: /etc/nginx/conf.d/upstreams.conf
+        mode: '0644'
+      notify: restart nginx
+
+    - name: Create main Nginx configuration
+      copy:
+        content: |
+          # Main proxy configuration
+          server {
+              listen 80;
+              server_name _;
+              client_max_body_size {{ nginx_client_max_body_size }};
+              
+              # Security headers
+              add_header X-Frame-Options DENY;
+              add_header X-Content-Type-Options nosniff;
+              add_header X-XSS-Protection "1; mode=block";
+              add_header Referrer-Policy "strict-origin-when-cross-origin";
+              
+              # Main landing page
+              location / {
+                  return 200 '<!DOCTYPE html>
+          <html>
+          <head>
+              <title>DevOps Infrastructure</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .service { margin: 20px 0; padding: 20px; border: 1px solid #ddd; }
+                  .service h3 { margin-top: 0; color: #333; }
+                  .service a { color: #0066cc; text-decoration: none; }
+                  .service a:hover { text-decoration: underline; }
+              </style>
+          </head>
+          <body>
+              <h1>DevOps Infrastructure Dashboard</h1>
+              
+              <div class="service">
+                  <h3>Monitoring & Logging</h3>
+                  <p><a href="/kibana/">Kibana</a> - Log analysis and visualization</p>
+                  <p><a href="/portainer/">Portainer</a> - Docker management interface</p>
+              </div>
+              
+              <div class="service">
+                  <h3>Data Processing</h3>
+                  <p><a href="/nifi/">Apache Nifi</a> - Data integration platform</p>
+                  <p><a href="/airflow/">Apache Airflow</a> - Workflow orchestration</p>
+              </div>
+              
+              <div class="service">
+                  <h3>APIs</h3>
+                  <p><a href="/elasticsearch/">Elasticsearch</a> - Search and analytics engine</p>
+              </div>
+              
+              <div class="service">
+                  <h3>System Information</h3>
+                  <p>Server: {{ ansible_hostname }}</p>
+                  <p>IP: {{ ansible_default_ipv4.address }}</p>
+                  <p>OS: {{ ansible_distribution }} {{ ansible_distribution_version }}</p>
+              </div>
+          </body>
+          </html>';
+                  add_header Content-Type text/html;
+              }
+              
+              # Kibana proxy
+              location /kibana/ {
+                  proxy_pass http://kibana/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_redirect off;
+                  
+                  # WebSocket support
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+              }
+              
+              # Nifi proxy
+              location /nifi/ {
+                  proxy_pass https://nifi/nifi/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_redirect off;
+                  
+                  # SSL verification off for self-signed certs
+                  proxy_ssl_verify off;
+                  
+                  # Large file upload support
+                  client_max_body_size 1G;
+                  proxy_read_timeout 300s;
+                  proxy_connect_timeout 75s;
+              }
+              
+              # Airflow proxy
+              location /airflow/ {
+                  proxy_pass http://airflow/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_redirect off;
+                  
+                  # WebSocket support for Airflow UI
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+              }
+              
+              # Portainer proxy
+              location /portainer/ {
+                  proxy_pass http://portainer/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_redirect off;
+                  
+                  # WebSocket support
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+              }
+              
+              # Elasticsearch API proxy
+              location /elasticsearch/ {
+                  proxy_pass http://elasticsearch/;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_redirect off;
+                  
+                  # Only allow GET requests for security
+                  limit_except GET {
+                      deny all;
+                  }
+              }
+              
+              # Health check endpoint
+              location /health {
+                  access_log off;
+                  return 200 "healthy\n";
+                  add_header Content-Type text/plain;
+              }
+          }
+        dest: /etc/nginx/conf.d/docker-proxy.conf
+        mode: '0644'
+      notify: restart nginx
+
+    - name: Create SSL configuration template (for future use)
+      copy:
+        content: |
+          # SSL Configuration Template
+          # Uncomment and configure these settings when SSL certificates are available
+          
+          # server {
+          #     listen 443 ssl http2;
+          #     server_name _;
+          #     
+          #     ssl_certificate {{ nginx_ssl_cert_path }};
+          #     ssl_certificate_key {{ nginx_ssl_key_path }};
+          #     
+          #     # SSL Settings
+          #     ssl_protocols {{ ssl_protocols | join(' ') }};
+          #     ssl_ciphers {{ ssl_ciphers }};
+          #     ssl_prefer_server_ciphers off;
+          #     
+          #     # HSTS
+          #     add_header Strict-Transport-Security "max-age=63072000" always;
+          #     
+          #     # Include the same location blocks from the HTTP configuration
+          #     include /etc/nginx/conf.d/docker-proxy.conf;
+          # }
+          # 
+          # # Redirect HTTP to HTTPS
+          # server {
+          #     listen 80;
+          #     server_name _;
+          #     return 301 https://$server_name$request_uri;
+          # }
+        dest: /etc/nginx/conf.d/ssl-template.conf.disabled
+        mode: '0644'
+
+    - name: Configure Nginx main settings
+      lineinfile:
+        path: /etc/nginx/nginx.conf
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        backup: yes
+      loop:
+        - { regexp: '^(\s*)worker_processes', line: '\tworker_processes auto;' }
+        - { regexp: '^(\s*)worker_connections', line: '\t\tworker_connections 1024;' }
+      notify: restart nginx
+
+    - name: Add custom Nginx configuration
+      blockinfile:
+        path: /etc/nginx/nginx.conf
+        insertafter: "http {"
+        block: |
+            # Logging
+            log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                            '$status $body_bytes_sent "$http_referer" '
+                            '"$http_user_agent" "$http_x_forwarded_for"';
+            
+            access_log /var/log/nginx/access.log main;
+            error_log /var/log/nginx/error.log warn;
+            
+            # Performance
+            sendfile on;
+            tcp_nopush on;
+            tcp_nodelay on;
+            keepalive_timeout 65;
+            types_hash_max_size 2048;
+            
+            # Security
+            server_tokens off;
+            client_max_body_size {{ nginx_client_max_body_size }};
+            
+            # Gzip compression
+            gzip on;
+            gzip_vary on;
+            gzip_min_length 1024;
+            gzip_proxied any;
+            gzip_comp_level 6;
+            gzip_types
+              text/plain
+              text/css
+              text/xml
+              text/javascript
+              application/json
+              application/javascript
+              application/xml+rss
+              application/atom+xml
+              image/svg+xml;
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - CUSTOM CONFIG"
+      notify: restart nginx
+
+    - name: Configure log rotation for Nginx
+      copy:
+        content: |
+          /var/log/nginx/*.log {
+              daily
+              missingok
+              rotate 52
+              compress
+              delaycompress
+              notifempty
+              create 640 www-data adm
+              sharedscripts
+              prerotate
+                  if [ -d /etc/logrotate.d/httpd-prerotate ]; then \
+                      run-parts /etc/logrotate.d/httpd-prerotate; \
+                  fi \
+              endscript
+              postrotate
+                  invoke-rc.d nginx rotate >/dev/null 2>&1
+              endscript
+          }
+        dest: /etc/logrotate.d/nginx
+        mode: '0644'
+
+    - name: Configure firewall for Nginx
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "80"
+        - "443"
+      when: firewall_enabled | default(true)
+
+    - name: Start and enable Nginx
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+
+    - name: Create Nginx monitoring script
+      copy:
+        content: |
+          #!/bin/bash
+          # Nginx health check script
+          
+          NGINX_STATUS=$(systemctl is-active nginx)
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/health)
+          
+          if [ "$NGINX_STATUS" != "active" ] || [ "$HTTP_STATUS" != "200" ]; then
+              echo "$(date): Nginx health check failed - Status: $NGINX_STATUS, HTTP: $HTTP_STATUS" >> /var/log/nginx/health.log
+              systemctl restart nginx
+          fi
+        dest: /usr/local/bin/nginx-health-check.sh
+        mode: '0755'
+
+    - name: Add Nginx health check cron job
+      cron:
+        name: "Nginx health check"
+        minute: "*/5"
+        job: "/usr/local/bin/nginx-health-check.sh"
+        user: root
+
+    - name: Display Nginx proxy information
+      debug:
+        msg: |
+          Nginx proxy setup completed!
+          
+          Main dashboard: http://{{ ansible_default_ipv4.address }}/
+          
+          Service endpoints:
+          - Kibana: http://{{ ansible_default_ipv4.address }}/kibana/
+          - Nifi: http://{{ ansible_default_ipv4.address }}/nifi/
+          - Airflow: http://{{ ansible_default_ipv4.address }}/airflow/
+          - Portainer: http://{{ ansible_default_ipv4.address }}/portainer/
+          - Elasticsearch API: http://{{ ansible_default_ipv4.address }}/elasticsearch/
+          - Health check: http://{{ ansible_default_ipv4.address }}/health
+          
+          SSL Configuration:
+          To enable SSL, follow these steps:
+          1. Obtain SSL certificates and place them at:
+             - Certificate: {{ nginx_ssl_cert_path }}
+             - Private key: {{ nginx_ssl_key_path }}
+          2. Set nginx_ssl_enabled: true in group_vars/all.yml
+          3. Rename /etc/nginx/conf.d/ssl-template.conf.disabled to ssl.conf
+          4. Restart Nginx
+          
+          Security features enabled:
+          - Security headers (XSS, CSRF, etc.)
+          - Request size limits
+          - Server tokens disabled
+          - Gzip compression
+          - Log rotation
+          - Health monitoring
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted

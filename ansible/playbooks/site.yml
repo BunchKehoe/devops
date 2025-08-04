@@ -1,0 +1,32 @@
+---
+# Main site playbook - deploys complete infrastructure
+- import_playbook: basic-setup.yml
+- import_playbook: users.yml  
+- import_playbook: git.yml
+- import_playbook: docker-setup.yml
+- import_playbook: elk-stack.yml
+- import_playbook: nginx.yml
+- import_playbook: nifi.yml
+- import_playbook: airflow.yml
+
+- name: Display deployment summary
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Display deployment summary
+      debug:
+        msg: |
+          Deployment completed successfully!
+          
+          Services available:
+          - Nginx Proxy: http://{{ ansible_default_ipv4.address }}
+          - Kibana: http://{{ ansible_default_ipv4.address }}:5601
+          - Elasticsearch: http://{{ ansible_default_ipv4.address }}:9200
+          - Nifi: https://{{ ansible_default_ipv4.address }}:8443/nifi
+          - Airflow: http://{{ ansible_default_ipv4.address }}:8080
+          
+          Next steps:
+          1. Configure SSL certificates for production use
+          2. Set up monitoring and alerting
+          3. Configure backup strategies
+          4. Review security settings
