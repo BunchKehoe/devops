@@ -12,8 +12,8 @@
         cache_valid_time: 3600
       when: ansible_os_family == "Debian"
 
-    - name: Update package cache (RedHat/CentOS)
-      yum:
+    - name: Update package cache (RedHat/CentOS/AlmaLinux)
+      dnf:
         update_cache: yes
       when: ansible_os_family == "RedHat"
 
@@ -22,6 +22,18 @@
         name: "{{ basic_packages }}"
         state: present
       register: package_install
+
+    - name: Install platform-specific packages (Debian/Ubuntu)
+      package:
+        name: "{{ basic_packages_debian }}"
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install platform-specific packages (RHEL/AlmaLinux)
+      package:
+        name: "{{ basic_packages_redhat }}"
+        state: present
+      when: ansible_os_family == "RedHat"
 
     - name: Install additional development tools
       package:
@@ -35,13 +47,13 @@
         state: present
       when: ansible_os_family == "Debian"
 
-    - name: Install additional development tools (RedHat/CentOS)
+    - name: Install additional development tools (RedHat/CentOS/AlmaLinux)
       package:
         name:
           - gcc
           - gcc-c++
           - make
-          - yum-utils
+          - dnf-utils
           - device-mapper-persistent-data
           - lvm2
         state: present
@@ -50,12 +62,10 @@
     - name: Install Python packages via pip
       pip:
         name:
-          - docker
-          - docker-compose
           - requests
           - pyyaml
         state: present
-        executable: pip3
+        executable: "{{ 'pip3' if ansible_os_family == 'Debian' else 'pip3' }}"
 
     - name: Configure vim as default editor
       alternatives:
@@ -79,18 +89,51 @@
         name: UTC
       notify: restart rsyslog
 
-    - name: Install and configure NTP
+    - name: Check if NTP package is available (Debian/Ubuntu)
+      apt:
+        name: ntp
+        state: present
+      check_mode: yes
+      register: ntp_check_apt
+      become: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Check if NTP package is available (RHEL/AlmaLinux)
+      dnf:
+        name: chrony
+        state: present
+      check_mode: yes
+      register: ntp_check_dnf
+      become: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install and configure NTP (Debian/Ubuntu)
       package:
         name: ntp
         state: present
       notify: restart ntp
+      when: ansible_os_family == "Debian"
 
-    - name: Start and enable NTP service
+    - name: Install and configure Chrony (RHEL/AlmaLinux)
+      package:
+        name: chrony
+        state: present
+      notify: restart chrony
+      when: ansible_os_family == "RedHat"
+
+    - name: Start and enable NTP service (Debian/Ubuntu)
       service:
         name: ntp
         state: started
         enabled: yes
       when: ansible_os_family == "Debian"
+
+    - name: Start and enable Chrony service (RHEL/AlmaLinux)
+      service:
+        name: chronyd
+        state: started
+        enabled: yes
+      when: ansible_os_family == "RedHat"
 
   handlers:
     - name: restart rsyslog
@@ -101,4 +144,9 @@
     - name: restart ntp
       service:
         name: ntp
+        state: restarted
+
+    - name: restart chrony
+      service:
+        name: chronyd
         state: restarted

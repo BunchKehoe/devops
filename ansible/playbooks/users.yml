@@ -6,7 +6,7 @@
   gather_facts: yes
 
   tasks:
-    - name: Install LDAP client packages
+    - name: Install LDAP client packages (Debian/Ubuntu)
       package:
         name:
           - ldap-utils
@@ -14,7 +14,16 @@
           - libpam-ldap
           - nscd
         state: present
-      when: ldap_enabled | default(false)
+      when: ldap_enabled | default(false) and ansible_os_family == "Debian"
+
+    - name: Install LDAP client packages (RHEL/AlmaLinux)
+      package:
+        name:
+          - openldap-clients
+          - nss-pam-ldapd
+          - nscd
+        state: present
+      when: ldap_enabled | default(false) and ansible_os_family == "RedHat"
 
     - name: Create system users
       user:
@@ -141,5 +150,5 @@
 
     - name: restart ssh
       service:
-        name: ssh
+        name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
         state: restarted

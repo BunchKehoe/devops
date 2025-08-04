@@ -1,7 +1,7 @@
 # Global variables for all hosts
 ---
 
-# Basic packages to install
+# Basic packages to install (cross-platform)
 basic_packages:
   - vim
   - curl
@@ -11,6 +11,17 @@ basic_packages:
   - net-tools
   - unzip
   - git
+
+# Platform-specific packages
+basic_packages_debian:
+  - apt-transport-https
+  - ca-certificates
+  - software-properties-common
+
+basic_packages_redhat:
+  - dnf-utils
+  - ca-certificates
+  - epel-release
 
 # User management settings
 users_to_create: []

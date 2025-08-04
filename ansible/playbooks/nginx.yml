@@ -287,7 +287,7 @@
         marker: "# {mark} ANSIBLE MANAGED BLOCK - CUSTOM CONFIG"
       notify: restart nginx
 
-    - name: Configure log rotation for Nginx
+    - name: Configure log rotation for Nginx (Debian/Ubuntu)
       copy:
         content: |
           /var/log/nginx/*.log {
@@ -310,8 +310,29 @@
           }
         dest: /etc/logrotate.d/nginx
         mode: '0644'
+      when: ansible_os_family == "Debian"
 
-    - name: Configure firewall for Nginx
+    - name: Configure log rotation for Nginx (RHEL/AlmaLinux)
+      copy:
+        content: |
+          /var/log/nginx/*.log {
+              daily
+              missingok
+              rotate 52
+              compress
+              delaycompress
+              notifempty
+              create 640 nginx nginx
+              sharedscripts
+              postrotate
+                  /bin/kill -USR1 `cat /run/nginx.pid 2>/dev/null` 2>/dev/null || true
+              endscript
+          }
+        dest: /etc/logrotate.d/nginx
+        mode: '0644'
+      when: ansible_os_family == "RedHat"
+
+    - name: Configure firewall for Nginx (Debian/Ubuntu)
       ufw:
         rule: allow
         port: "{{ item }}"
@@ -319,7 +340,20 @@
       loop:
         - "80"
         - "443"
-      when: firewall_enabled | default(true)
+      when: firewall_enabled | default(true) and ansible_os_family == "Debian"
+      ignore_errors: yes  # Don't fail if UFW is not available
+
+    - name: Configure firewall for Nginx (RHEL/AlmaLinux)
+      firewalld:
+        service: "{{ item }}"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - http
+        - https
+      when: firewall_enabled | default(true) and ansible_os_family == "RedHat"
+      ignore_errors: yes  # Don't fail if firewalld is not available
 
     - name: Start and enable Nginx
       service:

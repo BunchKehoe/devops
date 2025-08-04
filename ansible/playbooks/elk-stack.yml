@@ -284,13 +284,10 @@
         dest: /opt/docker/elk/docker-compose.yml
         mode: '0644'
 
-    - name: Build Fluentd image
-      community.docker.docker_image:
-        name: custom-fluentd
-        build:
-          path: /opt/docker/elk/fluentd
-        source: build
-        state: present
+    - name: Build Fluentd image using CLI
+      command: docker build -t custom-fluentd /opt/docker/elk/fluentd
+      args:
+        chdir: /opt/docker/elk/fluentd
 
     - name: Deploy ELK stack
       command: docker stack deploy -c /opt/docker/elk/docker-compose.yml elk

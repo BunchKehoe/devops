@@ -1,0 +1,336 @@
+---
+# Enhanced Minimal Docker Setup - CLI-based approach with more features
+- name: Enhanced Minimal Docker Setup
+  hosts: docker_hosts
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Check if Docker is already installed
+      command: docker --version
+      register: docker_installed
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install Docker dependencies (Ubuntu/Debian)
+      package:
+        name:
+          - curl
+          - ca-certificates
+          - python3-pip
+          - apt-transport-https
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian" and docker_installed.rc != 0
+
+    - name: Install Docker dependencies (RHEL/AlmaLinux)
+      package:
+        name:
+          - dnf-utils
+          - device-mapper-persistent-data
+          - lvm2
+          - curl
+          - ca-certificates
+          - python3-pip
+        state: present
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
+
+    - name: Add Docker GPG key (Ubuntu/Debian)
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian" and docker_installed.rc != 0
+
+    - name: Add Docker repository (Ubuntu/Debian)
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: ansible_os_family == "Debian" and docker_installed.rc != 0
+
+    - name: Add Docker GPG key (RHEL/AlmaLinux)
+      rpm_key:
+        key: https://download.docker.com/linux/centos/gpg
+        state: present
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
+
+    - name: Add Docker repository (RHEL/AlmaLinux)
+      yum_repository:
+        name: docker-ce-stable
+        description: Docker CE Stable - $basearch
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
+        state: present
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
+
+    - name: Install Docker
+      package:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: docker_installed.rc != 0
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+      when: ansible_user is defined
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Check if Docker Swarm is already initialized
+      shell: docker node ls
+      register: swarm_status
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Initialize Docker Swarm using CLI
+      shell: docker swarm init --advertise-addr 127.0.0.1 --listen-addr 127.0.0.1:2377
+      when: swarm_status.rc != 0
+      run_once: true
+
+    - name: Check if test_network exists
+      shell: docker network ls | grep test_network
+      register: test_network_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create test Docker network using CLI
+      shell: docker network create --driver overlay --attachable test_network
+      when: test_network_exists.rc != 0
+      run_once: true
+
+    - name: Check if app_network exists
+      shell: docker network ls | grep app_network
+      register: app_network_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create app Docker network using CLI
+      shell: docker network create --driver overlay --attachable app_network
+      when: app_network_exists.rc != 0
+      run_once: true
+
+    - name: Check if logging_network exists
+      shell: docker network ls | grep logging_network
+      register: logging_network_exists
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Create logging Docker network using CLI
+      shell: docker network create --driver overlay --attachable logging_network
+      when: logging_network_exists.rc != 0
+      run_once: true
+
+    - name: Create Docker volumes using CLI
+      shell: docker volume create {{ item }}
+      loop:
+        - test_volume
+        - app_data
+        - logs_data
+        - nginx_data
+        - postgres_data
+      run_once: true
+      register: volume_creation
+      changed_when: "'already exists' not in volume_creation.stderr"
+      failed_when: volume_creation.rc != 0 and 'already exists' not in volume_creation.stderr
+
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: docker
+      loop:
+        - /opt/docker/compose
+        - /opt/docker/configs
+        - /opt/docker/logs
+        - /opt/docker/data
+
+    - name: Create test Docker Compose stack
+      copy:
+        content: |
+          version: '3.8'
+          
+          services:
+            nginx-test:
+              image: nginx:alpine
+              ports:
+                - "8080:80"
+              networks:
+                - test_network
+              volumes:
+                - nginx_data:/usr/share/nginx/html
+              deploy:
+                replicas: 1
+                placement:
+                  constraints: [node.role == manager]
+              healthcheck:
+                test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+                interval: 30s
+                timeout: 10s
+                retries: 3
+
+            postgres-test:
+              image: postgres:13-alpine
+              environment:
+                POSTGRES_DB: testdb
+                POSTGRES_USER: testuser
+                POSTGRES_PASSWORD: testpass
+              networks:
+                - app_network
+              volumes:
+                - postgres_data:/var/lib/postgresql/data
+              deploy:
+                replicas: 1
+                placement:
+                  constraints: [node.role == manager]
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+                interval: 30s
+                timeout: 10s
+                retries: 5
+
+            portainer:
+              image: portainer/portainer-ce:latest
+              command: -H unix:///var/run/docker.sock
+              ports:
+                - "9000:9000"
+              volumes:
+                - /var/run/docker.sock:/var/run/docker.sock
+                - portainer_data:/data
+              networks:
+                - app_network
+              deploy:
+                placement:
+                  constraints: [node.role == manager]
+          
+          volumes:
+            nginx_data:
+              external: true
+            postgres_data:
+              external: true
+            portainer_data:
+              driver: local
+          
+          networks:
+            test_network:
+              external: true
+            app_network:
+              external: true
+        dest: /opt/docker/compose/test-stack.yml
+        mode: '0644'
+
+    - name: Deploy test stack using Docker CLI
+      shell: docker stack deploy -c /opt/docker/compose/test-stack.yml test-stack
+      run_once: true
+
+    - name: Configure basic firewall for Docker (RHEL/AlmaLinux)
+      firewalld:
+        port: "{{ item }}/tcp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - "2377"  # Swarm cluster management
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+        - "8080"  # Test nginx
+        - "9000"  # Portainer
+      when: firewall_enabled | default(true) and ansible_os_family == "RedHat"
+      ignore_errors: yes
+
+    - name: Configure basic firewall for Docker UDP (RHEL/AlmaLinux)
+      firewalld:
+        port: "{{ item }}/udp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+      when: firewall_enabled | default(true) and ansible_os_family == "RedHat"
+      ignore_errors: yes
+
+    - name: Configure basic firewall for Docker (Debian/Ubuntu)
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "2377"  # Swarm cluster management
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+        - "8080"  # Test nginx
+        - "9000"  # Portainer
+      when: firewall_enabled | default(true) and ansible_os_family == "Debian"
+      ignore_errors: yes
+
+    - name: Wait for test services to be ready
+      pause:
+        seconds: 30
+
+    - name: Verify Docker Swarm status
+      command: docker node ls
+      register: swarm_nodes
+      changed_when: false
+
+    - name: Verify Docker networks
+      command: docker network ls --filter driver=overlay
+      register: overlay_networks
+      changed_when: false
+
+    - name: Verify Docker volumes
+      command: docker volume ls
+      register: volumes_list
+      changed_when: false
+
+    - name: Verify Docker services
+      command: docker service ls
+      register: services_list
+      changed_when: false
+
+    - name: Display enhanced minimal Docker setup information
+      debug:
+        msg: |
+          Enhanced Minimal Docker setup completed using Docker CLI!
+          
+          === Docker Swarm Status ===
+          {{ swarm_nodes.stdout }}
+          
+          === Overlay Networks ===
+          {{ overlay_networks.stdout }}
+          
+          === Volumes ===
+          {{ volumes_list.stdout }}
+          
+          === Services ===
+          {{ services_list.stdout }}
+          
+          === Access URLs ===
+          - Test Nginx: http://localhost:8080
+          - Portainer: http://localhost:9000
+          - PostgreSQL: localhost:5432 (testuser/testpass/testdb)
+          
+          === Test Commands ===
+          - Check service logs: docker service logs test-stack_nginx-test
+          - Scale services: docker service scale test-stack_nginx-test=2
+          - Remove stack: docker stack rm test-stack
+          - Clean up: docker system prune -af --volumes
+          
+          === Platform Info ===
+          OS Family: {{ ansible_os_family }}
+          Distribution: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          
+          Note: All Docker operations use CLI commands to avoid
+          Python Docker SDK dependency issues.
