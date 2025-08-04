@@ -104,7 +104,6 @@
         name: "{{ item }}"
         driver: overlay
         attachable: true
-        docker_host: "unix:///var/run/docker.sock"
       loop:
         - "{{ app_network }}"
         - "{{ logging_network }}"
@@ -114,7 +113,6 @@
       community.docker.docker_volume:
         name: "{{ item }}"
         driver: local
-        docker_host: "unix:///var/run/docker.sock"
       loop:
         - elasticsearch_data
         - kibana_data
