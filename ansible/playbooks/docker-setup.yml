@@ -63,7 +63,7 @@
             "storage-driver": "{{ docker_daemon_options['storage-driver'] }}",
             "log-driver": "{{ docker_daemon_options['log-driver'] }}",
             "log-opts": {{ docker_daemon_options['log-opts'] | to_json }},
-            "live-restore": true,
+            "live-restore": false,
             "userland-proxy": false,
             "experimental": false,
             "metrics-addr": "0.0.0.0:9323",

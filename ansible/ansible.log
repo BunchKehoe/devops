@@ -689,3 +689,88 @@ disabled by setting deprecation_warnings=False in ansible.cfg.
   msg: '{"log-opts": {"tag": "docker.{{.Name}}"}}'
 2025-08-04 11:35:00,471 p=3945 u=root n=ansible INFO| PLAY RECAP *********************************************************************
 2025-08-04 11:35:00,472 p=3945 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:46:15,143 p=3624 u=root n=ansible INFO| localhost | SUCCESS => {
+    "docker_daemon_options": {
+        "log-driver": "fluentd",
+        "log-opts": {
+            "fluentd-address": "localhost:24224",
+            "tag": "docker.{{.Name}}"
+        },
+        "storage-driver": "overlay2"
+    }
+}
+2025-08-04 11:46:25,695 p=3633 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:46:25,795 p=3633 u=root n=ansible INFO| PLAY [Docker Swarm Setup] ******************************************************
+2025-08-04 11:46:25,801 p=3633 u=root n=ansible INFO| TASK [Gathering Facts] *********************************************************
+2025-08-04 11:46:25,816 p=3633 u=root n=ansible INFO| fatal: [localhost]: UNREACHABLE! => changed=false 
+  msg: 'Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in "/tmp", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1754307985.8113928-3638-161302641773976 `" && echo ansible-tmp-1754307985.8113928-3638-161302641773976="` echo /root/.ansible/tmp/ansible-tmp-1754307985.8113928-3638-161302641773976 `" ), exited with result 1'
+  unreachable: true
+2025-08-04 11:46:25,817 p=3633 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:46:25,817 p=3633 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:47:31,213 p=3665 u=root n=ansible INFO| playbook: playbooks/docker-setup.yml
+2025-08-04 11:47:31,213 p=3665 u=root n=ansible INFO|   play #1 (docker_hosts): Docker Swarm Setup	TAGS: []
+2025-08-04 11:47:31,214 p=3665 u=root n=ansible INFO|     tasks:
+      Install Docker dependencies	TAGS: []
+      Add Docker GPG key	TAGS: []
+      Add Docker repository	TAGS: []
+      Install Docker	TAGS: []
+      Add users to docker group	TAGS: []
+      Create Docker daemon configuration directory	TAGS: []
+      Configure Docker daemon	TAGS: []
+      Start and enable Docker	TAGS: []
+      Initialize Docker Swarm	TAGS: []
+      Get Swarm join token for workers	TAGS: []
+      Get Swarm join token for managers	TAGS: []
+      Create Docker networks	TAGS: []
+      Create Docker volumes for persistent data	TAGS: []
+      Install Docker Compose	TAGS: []
+      Create application directories	TAGS: []
+      Configure Docker log rotation	TAGS: []
+      Configure Docker system prune cron job	TAGS: []
+      Install Docker monitoring tools	TAGS: []
+      Create Docker Swarm monitoring stack	TAGS: []
+      Deploy Portainer for Docker management	TAGS: []
+      Configure firewall for Docker Swarm	TAGS: []
+      Configure firewall for Docker Swarm UDP	TAGS: []
+      Configure firewall for Docker Swarm (UFW)	TAGS: []
+      Configure firewall for Docker Swarm UDP (UFW)	TAGS: []
+      Display Docker Swarm information	TAGS: []
+
+2025-08-04 11:47:40,308 p=3673 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:47:40,319 p=3673 u=root n=ansible INFO| PLAY [Docker Swarm Setup] ******************************************************
+2025-08-04 11:47:40,325 p=3673 u=root n=ansible INFO| TASK [Gathering Facts] *********************************************************
+2025-08-04 11:47:40,340 p=3673 u=root n=ansible INFO| fatal: [localhost]: UNREACHABLE! => changed=false 
+  msg: 'Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in "/tmp", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1754308060.3348782-3678-119985096273213 `" && echo ansible-tmp-1754308060.3348782-3678-119985096273213="` echo /root/.ansible/tmp/ansible-tmp-1754308060.3348782-3678-119985096273213 `" ), exited with result 1'
+  unreachable: true
+2025-08-04 11:47:40,340 p=3673 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 11:47:40,340 p=3673 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 11:48:01,933 p=3692 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 11:48:01,951 p=3692 u=root n=ansible INFO| PLAY [Test Docker template rendering] **********************************************************************************
+2025-08-04 11:48:01,957 p=3692 u=root n=ansible INFO| TASK [Test template rendering] *****************************************************************************************
+2025-08-04 11:48:01,972 p=3692 u=root n=ansible INFO| ok: [localhost] => 
+  msg: '{"storage-driver": "overlay2", "log-driver": "fluentd", "log-opts": {"fluentd-address": "localhost:24224", "tag": "docker.{{.Name}}"}}'
+2025-08-04 11:48:01,974 p=3692 u=root n=ansible INFO| TASK [Test JSON generation for daemon.json] ****************************************************************************
+2025-08-04 11:48:01,988 p=3692 u=root n=ansible INFO| ok: [localhost] => 
+  msg:
+    experimental: false
+    live-restore: false
+    log-driver: fluentd
+    log-opts:
+      fluentd-address: localhost:24224
+      tag: docker.{{.Name}}
+    metrics-addr: 0.0.0.0:9323
+    storage-driver: overlay2
+    userland-proxy: false
+2025-08-04 11:48:01,989 p=3692 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 11:48:01,989 p=3692 u=root n=ansible INFO| localhost                  : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
