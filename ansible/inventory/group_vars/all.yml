@@ -37,7 +37,7 @@ git_default_branch: "main"
 # Docker configuration
 docker_edition: ce
 docker_users:
-  - "{{ ansible_user }}"
+  - "{{ ansible_user_id if ansible_connection == 'local' else ansible_user }}"
 docker_daemon_options:
   storage-driver: overlay2
   log-driver: fluentd

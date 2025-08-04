@@ -2711,3 +2711,26 @@ deprecation_warnings=False in ansible.cfg.
 2025-08-04 09:45:14,039 p=5167 u=root n=ansible INFO| playbook: playbooks/git.yml
 2025-08-04 09:45:14,499 p=5170 u=root n=ansible INFO| playbook: playbooks/docker-setup.yml
 2025-08-04 09:45:14,869 p=5173 u=root n=ansible INFO| playbook: playbooks/nginx.yml
+2025-08-04 10:45:29,070 p=4627 u=root n=ansible INFO| localhost | SUCCESS => {
+    "changed": false,
+    "ping": "pong"
+}
+2025-08-04 10:45:29,466 p=4653 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin 
+has been superseded by the the option `result_format=yaml` in callback plugin 
+ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be 
+disabled by setting deprecation_warnings=False in ansible.cfg.
+2025-08-04 10:45:29,477 p=4653 u=root n=ansible INFO| PLAY [Docker Swarm Setup] ******************************************************
+2025-08-04 10:45:29,483 p=4653 u=root n=ansible INFO| TASK [Gathering Facts] *********************************************************
+2025-08-04 10:45:30,322 p=4653 u=root n=ansible INFO| ok: [localhost]
+2025-08-04 10:45:30,327 p=4653 u=root n=ansible INFO| TASK [Install Docker dependencies] *********************************************
+2025-08-04 10:45:30,335 p=4653 u=root n=ansible INFO| skipping: [localhost]
+2025-08-04 10:45:30,339 p=4653 u=root n=ansible INFO| TASK [Add Docker GPG key] ******************************************************
+2025-08-04 10:45:30,347 p=4653 u=root n=ansible INFO| skipping: [localhost]
+2025-08-04 10:45:30,352 p=4653 u=root n=ansible INFO| TASK [Add Docker repository] ***************************************************
+2025-08-04 10:45:30,360 p=4653 u=root n=ansible INFO| skipping: [localhost]
+2025-08-04 10:45:30,366 p=4653 u=root n=ansible INFO| TASK [Install Docker] **********************************************************
+2025-08-04 10:45:31,313 p=4653 u=root n=ansible INFO| fatal: [localhost]: FAILED! => changed=false 
+  msg: No package matching 'docker-compose-plugin' is available
+2025-08-04 10:45:31,314 p=4653 u=root n=ansible INFO| PLAY RECAP *********************************************************************
+2025-08-04 10:45:31,314 p=4653 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0   
