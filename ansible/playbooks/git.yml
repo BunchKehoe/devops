@@ -112,11 +112,19 @@
         value: /opt/git-hooks
         scope: system
 
-    - name: Install Git flow
+    - name: Install Git flow (Debian/Ubuntu)
       package:
         name: git-flow
         state: present
       ignore_errors: yes  # Not available on all distributions
+      when: ansible_os_family == "Debian"
+
+    - name: Install Git flow (RHEL/AlmaLinux)
+      package:
+        name: gitflow
+        state: present
+      ignore_errors: yes  # Not available on all distributions  
+      when: ansible_os_family == "RedHat"
 
     - name: Create .gitignore template
       copy:
