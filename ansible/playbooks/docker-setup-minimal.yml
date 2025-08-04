@@ -1,0 +1,119 @@
+---
+# Minimal Docker Setup - Just the essentials for testing
+- name: Minimal Docker Setup
+  hosts: docker_hosts
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Check if Docker is already installed
+      command: docker --version
+      register: docker_installed
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install Docker dependencies (Ubuntu/Debian)
+      package:
+        name:
+          - curl
+          - ca-certificates
+          - python3-pip
+        state: present
+      when: ansible_os_family == "Debian" and docker_installed.rc != 0
+
+    - name: Install Docker dependencies (RedHat/CentOS)
+      package:
+        name:
+          - dnf-utils
+          - device-mapper-persistent-data
+          - lvm2
+          - curl
+          - ca-certificates
+          - python3-pip
+        state: present
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
+
+    - name: Add Docker GPG key (Ubuntu/Debian)
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ansible_os_family == "Debian" and docker_installed.rc != 0
+
+    - name: Add Docker repository (Ubuntu/Debian)
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      when: ansible_os_family == "Debian" and docker_installed.rc != 0
+
+    - name: Add Docker GPG key (RedHat/CentOS)
+      rpm_key:
+        key: https://download.docker.com/linux/centos/gpg
+        state: present
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
+
+    - name: Add Docker repository (RedHat/CentOS)
+      yum_repository:
+        name: docker-ce-stable
+        description: Docker CE Stable - $basearch
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
+        state: present
+      when: ansible_os_family == "RedHat" and docker_installed.rc != 0
+
+    - name: Install Docker
+      package:
+        name: 
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+      when: docker_installed.rc != 0
+
+    - name: Start and enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Docker SDK for Python (required for Ansible Docker modules)
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+
+    - name: Initialize Docker Swarm (minimal setup)
+      community.docker.docker_swarm:
+        state: present
+        advertise_addr: "127.0.0.1"
+        listen_addr: "127.0.0.1:2377"
+      run_once: true
+
+    - name: Create minimal Docker network for testing
+      community.docker.docker_network:
+        name: "test_network"
+        driver: overlay
+        attachable: true
+      run_once: true
+
+    - name: Create minimal Docker volume for testing
+      community.docker.docker_volume:
+        name: "test_volume"
+        driver: local
+      run_once: true
+
+    - name: Display minimal Docker setup information
+      debug:
+        msg: |
+          Minimal Docker setup completed!
+          
+          Docker Swarm initialized on: 127.0.0.1:2377
+          Test network created: test_network
+          Test volume created: test_volume
+          
+          Test commands:
+          - docker node ls
+          - docker network ls
+          - docker volume ls
+          - docker service create --name test-service --network test_network nginx:alpine
