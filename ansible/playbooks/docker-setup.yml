@@ -9,26 +9,30 @@
     - name: Install Docker dependencies
       package:
         name:
-          - apt-transport-https
-          - ca-certificates
+          - dnf-utils
+          - device-mapper-persistent-data
+          - lvm2
           - curl
-          - gnupg
-          - lsb-release
+          - ca-certificates
         state: present
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "RedHat"
 
     - name: Add Docker GPG key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
+      rpm_key:
+        key: https://download.docker.com/linux/centos/gpg
         state: present
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "RedHat"
 
     - name: Add Docker repository
-      apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+      yum_repository:
+        name: docker-ce-stable
+        description: Docker CE Stable - $basearch
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        gpgcheck: yes
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        enabled: yes
         state: present
-        update_cache: yes
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "RedHat"
 
     - name: Install Docker
       package:
@@ -201,6 +205,30 @@
       run_once: true
 
     - name: Configure firewall for Docker Swarm
+      firewalld:
+        port: "{{ item }}/tcp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - "2376"  # Docker daemon
+        - "2377"  # Swarm cluster management
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+      when: firewall_enabled | default(true) and ansible_os_family == "RedHat"
+
+    - name: Configure firewall for Docker Swarm UDP
+      firewalld:
+        port: "{{ item }/udp"
+        permanent: yes
+        state: enabled
+        immediate: yes
+      loop:
+        - "7946"  # Container network discovery
+        - "4789"  # Overlay network traffic
+      when: firewall_enabled | default(true) and ansible_os_family == "RedHat"
+
+    - name: Configure firewall for Docker Swarm (UFW)
       ufw:
         rule: allow
         port: "{{ item }}"
@@ -210,9 +238,9 @@
         - "2377"  # Swarm cluster management
         - "7946"  # Container network discovery
         - "4789"  # Overlay network traffic
-      when: firewall_enabled | default(true)
+      when: firewall_enabled | default(true) and ansible_os_family == "Debian"
 
-    - name: Configure firewall for Docker Swarm UDP
+    - name: Configure firewall for Docker Swarm UDP (UFW)
       ufw:
         rule: allow
         port: "{{ item }}"
@@ -220,7 +248,7 @@
       loop:
         - "7946"  # Container network discovery
         - "4789"  # Overlay network traffic
-      when: firewall_enabled | default(true)
+      when: firewall_enabled | default(true) and ansible_os_family == "Debian"
 
     - name: Display Docker Swarm information
       debug:
