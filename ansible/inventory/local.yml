@@ -1,0 +1,39 @@
+---
+# Local deployment inventory for running on localhost
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      
+  children:
+    docker_hosts:
+      hosts:
+        localhost:
+      vars:
+        # Docker-specific variables
+        docker_edition: ce
+        docker_package: docker-{{ docker_edition }}
+        docker_package_state: present
+        
+    web_servers:
+      hosts:
+        localhost:
+      vars:
+        # Nginx-specific variables
+        nginx_user: www-data
+        
+    elk_servers:
+      hosts:
+        localhost:
+      vars:
+        # ELK stack variables
+        elasticsearch_heap_size: 1g
+        
+    app_servers:
+      hosts:
+        localhost:
+      vars:
+        # Application server variables
+        java_packages:
+          - openjdk-11-jdk
