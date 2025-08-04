@@ -85,3 +85,179 @@ deprecation_warnings=False in ansible.cfg.
   unreachable: true
 2025-08-04 10:15:21,593 p=3827 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
 2025-08-04 10:15:21,593 p=3827 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 10:38:18,200 p=3288 u=root n=ansible INFO| localhost | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in \"/tmp\", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p \"` echo /root/.ansible/tmp `\"&& mkdir \"` echo /root/.ansible/tmp/ansible-tmp-1754303898.1941507-3293-52074658675412 `\" && echo ansible-tmp-1754303898.1941507-3293-52074658675412=\"` echo /root/.ansible/tmp/ansible-tmp-1754303898.1941507-3293-52074658675412 `\" ), exited with result 1",
+    "unreachable": true
+}
+2025-08-04 10:38:30,168 p=3304 u=root n=ansible INFO| localhost | SUCCESS => {
+    "ansible_user_id": "VARIABLE IS NOT DEFINED!"
+}
+2025-08-04 10:38:38,513 p=3311 u=root n=ansible INFO| localhost | SUCCESS => {
+    "ansible_user": "ubuntu"
+}
+2025-08-04 10:38:46,908 p=3321 u=root n=ansible INFO| localhost | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in \"/tmp\", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p \"` echo /root/.ansible/tmp `\"&& mkdir \"` echo /root/.ansible/tmp/ansible-tmp-1754303926.902143-3326-236485349226738 `\" && echo ansible-tmp-1754303926.902143-3326-236485349226738=\"` echo /root/.ansible/tmp/ansible-tmp-1754303926.902143-3326-236485349226738 `\" ), exited with result 1",
+    "unreachable": true
+}
+2025-08-04 10:38:56,292 p=3338 u=root n=ansible INFO| localhost | SUCCESS => {
+    "ansible_env.USER": "VARIABLE IS NOT DEFINED!"
+}
+2025-08-04 10:39:06,093 p=3404 u=root n=ansible INFO| localhost | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in \"/tmp\", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p \"` echo /root/.ansible/tmp `\"&& mkdir \"` echo /root/.ansible/tmp/ansible-tmp-1754303946.08698-3409-189169052709329 `\" && echo ansible-tmp-1754303946.08698-3409-189169052709329=\"` echo /root/.ansible/tmp/ansible-tmp-1754303946.08698-3409-189169052709329 `\" ), exited with result 1",
+    "unreachable": true
+}
+2025-08-04 10:39:14,787 p=3424 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 10:39:14,849 p=3424 u=root n=ansible INFO| PLAY [Docker Swarm Setup] **********************************************************************************************
+2025-08-04 10:39:14,856 p=3424 u=root n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************
+2025-08-04 10:39:14,870 p=3424 u=root n=ansible INFO| fatal: [localhost]: UNREACHABLE! => changed=false 
+  msg: 'Failed to create temporary directory. In some cases, you may have been able to authenticate and did not have permissions on the target directory. Consider changing the remote tmp path in ansible.cfg to a path rooted in "/tmp", for more error information use -vvv. Failed command was: ( umask 77 && mkdir -p "` echo /root/.ansible/tmp `"&& mkdir "` echo /root/.ansible/tmp/ansible-tmp-1754303954.8657343-3428-4214281939991 `" && echo ansible-tmp-1754303954.8657343-3428-4214281939991="` echo /root/.ansible/tmp/ansible-tmp-1754303954.8657343-3428-4214281939991 `" ), exited with result 1'
+  unreachable: true
+2025-08-04 10:39:14,871 p=3424 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 10:39:14,871 p=3424 u=root n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2025-08-04 10:39:34,306 p=3443 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 10:39:34,317 p=3443 u=root n=ansible INFO| PLAY [Docker Swarm Setup] **********************************************************************************************
+2025-08-04 10:39:34,323 p=3443 u=root n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************
+2025-08-04 10:39:35,682 p=3443 u=root n=ansible INFO| ok: [localhost]
+2025-08-04 10:39:35,686 p=3443 u=root n=ansible INFO| TASK [Install Docker dependencies] *************************************************************************************
+2025-08-04 10:39:35,694 p=3443 u=root n=ansible INFO| skipping: [localhost]
+2025-08-04 10:39:35,698 p=3443 u=root n=ansible INFO| TASK [Add Docker GPG key] **********************************************************************************************
+2025-08-04 10:39:35,706 p=3443 u=root n=ansible INFO| skipping: [localhost]
+2025-08-04 10:39:35,710 p=3443 u=root n=ansible INFO| TASK [Add Docker repository] *******************************************************************************************
+2025-08-04 10:39:35,718 p=3443 u=root n=ansible INFO| skipping: [localhost]
+2025-08-04 10:39:35,722 p=3443 u=root n=ansible INFO| TASK [Install Docker] **************************************************************************************************
+2025-08-04 10:39:37,177 p=3443 u=root n=ansible INFO| fatal: [localhost]: FAILED! => changed=false 
+  msg: No package matching 'docker-compose-plugin' is available
+2025-08-04 10:39:37,178 p=3443 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 10:39:37,178 p=3443 u=root n=ansible INFO| localhost                  : ok=1    changed=0    unreachable=0    failed=1    skipped=3    rescued=0    ignored=0   
+2025-08-04 10:39:47,998 p=3592 u=root n=ansible INFO| localhost | SUCCESS => {
+    "docker_users": [
+        "ubuntu"
+    ]
+}
+2025-08-04 10:40:07,443 p=3605 u=root n=ansible INFO| localhost | SUCCESS => {
+    "ansible_user": "ubuntu"
+}
+2025-08-04 10:40:28,174 p=3621 u=root n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option 
+`result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be 
+removed from community.general in version 12.0.0. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+2025-08-04 10:40:28,193 p=3621 u=root n=ansible INFO| PLAY [Test Docker Users Variable] **************************************************************************************
+2025-08-04 10:40:28,199 p=3621 u=root n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************
+2025-08-04 10:40:29,045 p=3621 u=root n=ansible INFO| ok: [localhost]
+2025-08-04 10:40:29,049 p=3621 u=root n=ansible INFO| TASK [Debug docker_users variable] *************************************************************************************
+2025-08-04 10:40:29,060 p=3621 u=root n=ansible INFO| ok: [localhost] => 
+  docker_users:
+  - ubuntu
+2025-08-04 10:40:29,064 p=3621 u=root n=ansible INFO| TASK [Debug ansible_user variable] *************************************************************************************
+2025-08-04 10:40:29,074 p=3621 u=root n=ansible INFO| ok: [localhost] => 
+  ansible_user: ubuntu
+2025-08-04 10:40:29,078 p=3621 u=root n=ansible INFO| TASK [Add users to docker group] ***************************************************************************************
+2025-08-04 10:40:29,087 p=3621 u=root n=ansible INFO| fatal: [localhost]: FAILED! => 
+  msg: '[''{{ ansible_user }}'']: ''ansible_user'' is undefined'
+2025-08-04 10:40:29,087 p=3621 u=root n=ansible INFO| PLAY RECAP *************************************************************************************************************
+2025-08-04 10:40:29,087 p=3621 u=root n=ansible INFO| localhost                  : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2025-08-04 10:40:40,245 p=3734 u=root n=ansible INFO| localhost | SUCCESS => {
+    "docker_users": [
+        "ubuntu"
+    ]
+}
+2025-08-04 10:41:13,797 p=3748 u=root n=ansible INFO| all:
+  children:
+    app_servers:
+      hosts:
+        localhost: {}
+    docker_hosts:
+      hosts:
+        localhost:
+          airflow_executor: LocalExecutor
+          airflow_fernet_key: ''
+          airflow_version: 2.7.3
+          airflow_web_port: 8080
+          ansible_connection: local
+          ansible_python_interpreter: '{{ ansible_playbook_python }}'
+          app_network: app_network
+          basic_packages:
+          - vim
+          - curl
+          - wget
+          - python3-pip
+          - htop
+          - net-tools
+          - unzip
+          - git
+          docker_daemon_options:
+            log-driver: fluentd
+            log-opts:
+              fluentd-address: localhost:24224
+              tag: docker.{{.Name}}
+            storage-driver: overlay2
+          docker_edition: ce
+          docker_package: docker-{{ docker_edition }}
+          docker_package_state: present
+          docker_swarm_addr: '{{ ansible_default_ipv4.address }}'
+          docker_swarm_port: 2377
+          docker_users:
+          - '{{ ansible_user }}'
+          elasticsearch_cluster_name: elk-cluster
+          elasticsearch_heap_size: 1g
+          elasticsearch_node_name: elk-node-1
+          elasticsearch_version: 8.11.0
+          fail2ban_enabled: true
+          firewall_enabled: true
+          fluentd_inputs:
+          - port: 24224
+            type: forward
+          - port: 5140
+            type: syslog
+          fluentd_port: 24224
+          fluentd_version: v1.16
+          git_default_branch: main
+          git_user_email: ''
+          git_user_name: ''
+          java_packages:
+          - openjdk-11-jdk
+          kibana_server_host: 0.0.0.0
+          kibana_server_port: 5601
+          kibana_version: 8.11.0
+          ldap_base_dn: ''
+          ldap_bind_dn: ''
+          ldap_bind_password: ''
+          ldap_enabled: false
+          ldap_search_filter: (objectClass=user)
+          ldap_server: ''
+          log_retention_days: 30
+          logging_network: logging_network
+          nginx_client_max_body_size: 64M
+          nginx_ssl_cert_path: /etc/ssl/certs/nginx.crt
+          nginx_ssl_enabled: false
+          nginx_ssl_key_path: /etc/ssl/private/nginx.key
+          nginx_user: www-data
+          nifi_cluster_is_node: true
+          nifi_cluster_node_protocol_port: 11443
+          nifi_version: 1.24.0
+          nifi_web_port: 8443
+          nifi_zookeeper_connect_string: localhost:2181
+          postgres_db: airflow
+          postgres_password: ''
+          postgres_user: airflow
+          ssl_ciphers: ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384
+          ssl_protocols:
+          - TLSv1.2
+          - TLSv1.3
+          users_to_create: []
+    elk_servers:
+      hosts:
+        localhost: {}
+    web_servers:
+      hosts:
+        localhost: {}
+
